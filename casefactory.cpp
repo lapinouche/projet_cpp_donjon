@@ -23,7 +23,7 @@ public:
         } else if (type == TypeCase::PIEGE) {
             return new Piege();
         } else {
-            throw std::invalid_argument("Type de case inconnu");
+            return nullptr;
         }
     }
 };

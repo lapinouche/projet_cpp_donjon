@@ -189,7 +189,7 @@ class Donjon {
         void placerElement(const vector<vector<Case*>>& grille){
             for (int i=0; i<20; i++){
                 for (int j=0; j<20; j++){
-                    if (typeid(grille[i][j])) == Passage){
+                    if (typeid(grille[i][j]) == Passage){
                         int r = rand() % 100;
                         if (r < 5){
                             *grille[i][j] = *CaseFactory::creerCase(TypeCase::TRESOR);

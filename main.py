@@ -127,30 +127,8 @@ class Donjon{
             //map<int, Case*> piece = {{0, Mur()}, {1, Passage()}, {2, Tresor()}, {3, Monstre()}, {4, Piege()}};
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
-                    int choice = rand() % 6;
-                    if (choice == 0){
-                        Mur* m;
-                        Case* grille[i][j]{m};
-                    }
-                    else if (choice == 1){
-                        Passage* p;
-                        Case* grille[i][j]{p};
-                    }
-                    else if (choice == 2){
-                        Tresor* t;
-                        Case* grille[i][j]{t};
-                    }
-                    else if (choice == 3){
-                        Monstre* m;
-                        Case* grille[i][j]{m};
-                    }
-                    else if (choice == 4){
-                        Piege* p;
-                        Case* grille[i][j]{p};
-                    }
-                    else {
-                        Case* grille[i][j]{nullptr};
-                    }
+                    Mur* m;
+                    Case* grille[i][j]{m};
                 }
             }
         }

@@ -47,6 +47,10 @@ class Case{
 
         virtual char afficher() = 0;
         virtual ~Case() = default;
+
+        virtual bool SetV(const bool newstate){
+            visiter = newstate;
+        }
 };
 
 class Mur : public Case {
@@ -147,7 +151,7 @@ class Donjon{
         }
 
         vector<vector<Case*>> genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){
-            grille[x][y][0].visiter = true;
+            grille[x][y][0].SetV(true);
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
 
             for (string d : directions){
@@ -283,6 +287,6 @@ int main(){
     bfs.trouverChemin(grille, 0, 10);
     bfs.reconstruireChemin();
     */
-   
+
     return 0;
 }

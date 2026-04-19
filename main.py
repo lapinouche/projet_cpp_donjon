@@ -111,20 +111,54 @@ class Piege : public Case {
         }
 };
 
-class Donjon {
+
+class Donjon{
     private:
         vector<vector<Case*>> grille;
+        int largeur;
+        int hauteur;
+
     public:
-        Donjon(const vector<vector<Case*>>& grille) : grille(grille) {}
+        Donjon(const vector<vector<Case*>>& grille, const int l=0, const int h=0) : largeur(l), hauteur(h), grille(grille) {}
 
         void generer(int largeur, int hauteur){
-
+            this->largeur = largeur;
+            this->hauteur = hauteur;
+            //map<int, Case*> piece = {{0, Mur()}, {1, Passage()}, {2, Tresor()}, {3, Monstre()}, {4, Piege()}};
+            for (int i=0; i < largeur; i++){
+                for (int j=0; j < hauteur; j++){
+                    int choice = rand() % 6;
+                    if (choice == 0){
+                        Mur* m;
+                        Case* grille[i][j]{m};
+                    }
+                    else if (choice == 1){
+                        Passage* p;
+                        Case* grille[i][j]{p};
+                    }
+                    else if (choice == 2){
+                        Tresor* t;
+                        Case* grille[i][j]{t};
+                    }
+                    else if (choice == 3){
+                        Monstre* m;
+                        Case* grille[i][j]{m};
+                    }
+                    else if (choice == 4){
+                        Piege* p;
+                        Case* grille[i][j]{p};
+                    }
+                    else {
+                        Case* grille[i][j]{nullptr};
+                    }
+                }
+            }
         }
 
         void afficher(){
-            for (int i=0; i < sqrt(grille.size()); i++){
-                for (int j=0; j < sqrt(grille.size()); j++){
-                    Case* g = grille[i][j];
+            for (int i=0; i < this->largeur; i++){
+                for (int j=0; j < this->hauteur; j++){
+                    Case* g = &grille[i][j][0];
                     cout << g->afficher();
                 }
                 cout << endl;
@@ -137,7 +171,7 @@ class Donjon {
         }
 
         void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){
-            grille[x][y][0].visiter &= true;
+            grille[x][y][0].visiter = true;
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
 
             for (string d : directions){
@@ -161,13 +195,13 @@ class Donjon {
                     ny = y;
                 }
 
-                bool c1 = (0 < nx < sqrt(grille.size()));
-                bool c2 = (0 < ny < sqrt(grille.size()));
+                bool c1 = (0 < nx < this->largeur);
+                bool c2 = (0 < ny < this->hauteur);
 
                 if (c1 == true && c2 == true){
                     Passage* p;
-                    Case* grille[nx][ny] = p;
-                    genererLabyrinthe(this->grille, nx, ny);
+                    Case* grille[nx][ny]{p};
+                    return genererLabyrinthe(this->grille, nx, ny);
                 }
             }
         }

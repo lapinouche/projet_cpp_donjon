@@ -50,6 +50,7 @@ class Case{
 
         virtual bool SetV(const bool newstate){
             visiter = newstate;
+            return visiter;
         }
 };
 
@@ -150,7 +151,7 @@ class Donjon{
 
         }
 
-        vector<vector<Case*>> genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){
+        void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
             grille[x][y][0].SetV(true);
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
 
@@ -183,7 +184,6 @@ class Donjon{
                     Case* grille[nx][ny]{p};
                     return genererLabyrinthe(this->grille, nx, ny);
                 }
-                return grille;
             }
         }
 
@@ -206,6 +206,7 @@ class Donjon{
             genererLabyrinthe(grille, 1, 1);
             poserEntree(grille);
             poserSortie(grille);
+            return grille;
         }
 
         void placerElement(vector<vector<Case*>>& grille){

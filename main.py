@@ -229,8 +229,8 @@ class Donjon{
         }
 
         void placerElement(const vector<vector<Case*>>& grille){
-            for (int i=0; i<20; i++){
-                for (int j=0; j<20; j++){
+            for (int i=0; i < this->largeur; i++){
+                for (int j=0; j < this->hauteur; j++){
                     if (typeid(grille[i][j][0]) == typeid(Passage)){
                         int r = rand() % 100;
                         if (r < 5){

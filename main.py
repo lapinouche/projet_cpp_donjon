@@ -88,6 +88,33 @@ class Piege : public Case {
         }
 };
 
+class Aventurier{
+    private:
+        pair<int, int> position;
+        int sante; // point de vie du joueur (initialiser à 100/100)
+        int inventaire; // nombre de tresor ramasser par le joueur
+    public:
+        Aventurier(const pair<int, int>& position = {0, 0}, const int sante = 100, const int inventaire = 0) : position(position), sante(sante), inventaire(inventaire) {}
+
+        void deplacer(int nx, int ny){
+            // precondition : la case (nx, ny) est franchissable (pas un mur)
+            this->position = {nx, ny};
+        }
+
+        bool estVivant(){
+            if (this->sante > 0){
+                return true;
+            }
+            return false;
+        }
+
+        void afficherStatut(){
+            cout << "position courante : ";
+            cout << "(" << position.first << ", " << position.second << ")" << endl;
+            cout << "points de vie : " << sante << endl;
+            cout << "contenu de l'inventaire : " << inventaire << endl;
+        }
+};
 
 enum class TypeCase {
     MUR,

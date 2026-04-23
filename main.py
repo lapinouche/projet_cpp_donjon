@@ -6,40 +6,9 @@
 #include <math.h>
 #include <queue>
 #include <map>
-//#include "Case.cpp"
+#include <memory>
 
 using namespace std;
-
-enum class TypeCase {
-    MUR,
-    PASSAGE,
-    TRESOR,
-    MONSTRE,
-    PIEGE
-};
-
-class CaseFactory {
-    public:
-        static Case* creerCase(TypeCase type) {
-            switch(type){
-                case TypeCase::MUR:{
-                    return new Mur();
-                }
-                case TypeCase::PASSAGE:{
-                    return new Passage();
-                }
-                case TypeCase::TRESOR:{
-                    return new Tresor();
-                }
-                case TypeCase::PIEGE:{
-                    return new Piege();
-                }
-                default:{
-                    return nullptr;
-                }
-            }
-        }
-};
 
 class Case{
     protected:
@@ -51,7 +20,7 @@ class Case{
         virtual char afficher() = 0;
         virtual ~Case() = default;
 
-        virtual bool SetV(const bool newstate){
+        bool SetV(const bool newstate){
             visiter = newstate;
             return visiter;
         }
@@ -119,6 +88,38 @@ class Piege : public Case {
         }
 };
 
+
+enum class TypeCase {
+    MUR,
+    PASSAGE,
+    TRESOR,
+    MONSTRE,
+    PIEGE
+};
+
+class CaseFactory {
+    public:
+        static Case* creerCase(TypeCase type) {
+            switch(type){
+                case TypeCase::MUR:{
+                    return new Mur();
+                }
+                case TypeCase::PASSAGE:{
+                    return new Passage();
+                }
+                case TypeCase::TRESOR:{
+                    return new Tresor();
+                }
+                case TypeCase::PIEGE:{
+                    return new Piege();
+                }
+                default:{
+                    return nullptr;
+                }
+            }
+        }
+};
+
 class Donjon{
     private:
         vector<vector<Case*>> grille;
@@ -134,7 +135,9 @@ class Donjon{
             //map<int, Case*> piece = {{0, Mur()}, {1, Passage()}, {2, Tresor()}, {3, Monstre()}, {4, Piege()}};
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
-                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                    this->grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                    //Mur* m;
+                    //Case* grille[i][j]{m};
                 }
             }
         }
@@ -150,8 +153,40 @@ class Donjon{
             cout << endl;
         }
 
-        vector<pair<int, int>> trouverChemin(){
+        vector<pair<int, int>> trouverChemin(int x, int y){
+            vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
+            for (string d : directions){
+                int nx;
+                int ny;
 
+                if (d == "NORD"){
+                    nx = x;
+                    ny = y + 1;
+                }
+                if (d == "SUD"){
+                    nx = x;
+                    ny = y - 1;
+                }
+                if (d == "EST"){
+                    nx = x + 1;
+                    ny = y;
+                }
+                if (d == "OUEST"){
+                    nx = x - 1;
+                    ny = y;
+                }
+
+                bool c1 = (0 < nx < this->largeur);
+                bool c2 = (0 < ny < this->hauteur);
+
+                if (c1 == true && c2 == true){
+                    if (typeid(grille[nx][ny][0]) == typeid(Passage)){
+                        vector<pair<int, int>> chemin = {{nx, ny}};
+                        return chemin;
+                    }
+                }
+            }
+            return {};
         }
 
         void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
@@ -183,8 +218,9 @@ class Donjon{
                 bool c2 = (0 < ny < this->hauteur);
 
                 if (c1 == true && c2 == true){
-                    Passage* p;
-                    Case* grille[nx][ny]{p};
+                    //Passage* p;
+                    //Case* grille[nx][ny]{p};
+                    grille[nx][ny] = CaseFactory::creerCase(TypeCase::PASSAGE);
                     return genererLabyrinthe(this->grille, nx, ny);
                 }
             }
@@ -203,7 +239,9 @@ class Donjon{
         vector<vector<Case*>> initialiserGrille(int largeur, int hauteur){
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
-                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                    this->grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                    //Mur* m;
+                    //Case* grille[i][j]{m};
                 }
             }
             genererLabyrinthe(grille, 1, 1);
@@ -219,12 +257,23 @@ class Donjon{
                         int r = rand() % 100;
                         if (r < 5){
                             grille[i][j] = CaseFactory::creerCase(TypeCase::TRESOR);
+                            //grille[i][j].assign(1, CaseFactory::creerCase(TypeCase::TRESOR));
+                            //Case* newtresor = CaseFactory::creerCase(TypeCase::TRESOR);
+                            //grille[i][j] = newtresor;
+                            //Tresor* m;
+                            //Case* grille[i][j]{m};
                         }
                         else if (r < 10) {
                             grille[i][j] = CaseFactory::creerCase(TypeCase::MONSTRE);
+                            //Case* newmonstre = CaseFactory::creerCase(TypeCase::MONSTRE);
+                            //grille[i][j] = newmonstre;
+                            //Monstre* m;
+                            //Case* grille[i][j]{m};
                         }
                         else if (r < 13) {
                             grille[i][j] = CaseFactory::creerCase(TypeCase::PIEGE);
+                            //Piege* p;
+                            //Case* grille[i][j]{p};
                         }
                     }
                 }
@@ -252,11 +301,12 @@ class BFS{
 
             this->visite[depart] = true;
             while(file.empty() == false){
-                int courant = file.front(); // or back !??#?
+                int courant = file.back(); // front or back !??#?
                 if (courant == arrivee){
                     return reconstruireChemin(parent, depart, arrivee);
                 }
             }
+            return {};
         }
 
         queue<int> reconstruireChemin(const vector<int>& parent, int depart, int arrivee){
@@ -286,11 +336,8 @@ int main(){
     d.placerElement(grille);
     d.afficher();
 
-    /*
-    BFS bfs();
+    BFS bfs;
     bfs.trouverChemin(grille, 0, 10);
-    bfs.reconstruireChemin();
-    */
 
     return 0;
 }

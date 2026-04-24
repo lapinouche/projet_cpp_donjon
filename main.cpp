@@ -8,6 +8,8 @@
 #include <map>
 #include <memory>
 #include <utility> // for pair
+#include <stdexcept> // for throwing error
+
 
 using namespace std;
 
@@ -25,6 +27,11 @@ class Case{
             visiter = newstate;
             return visiter;
         }
+
+        /*
+        void boucleDeJeu(Donjon& d){
+
+        }*/
 };
 
 class Mur : public Case {
@@ -86,76 +93,6 @@ class Piege : public Case {
 
         int getDegats () const {
             return degats;
-        }
-};
-
-class Aventurier : public Case, Donjon {
-    private:
-        vector<vector<Case*>> grille;
-        pair<int, int> last_pos; // à mettre à jour lors avant le deplacement du joueur dans la boucle de jeu
-        pair<int, int> position;
-        int sante; // point de vie du joueur (initialiser à 100/100)
-        int inventaire; // nombre de tresor ramasser par le joueur
-    public:
-        Aventurier(vector<vector<Case*>>& grille, const pair<int, int>& last_pos = {0, 0}, const pair<int, int>& position = {0, 0}, const int sante = 100, const int inventaire = 0) : Donjon(grille), last_pos(last_pos), position(position), sante(sante), inventaire(inventaire) {}
-
-        char afficher () override {
-            return '@';
-        }
-
-        void deplacer(int nx, int ny){
-            // precondition : la case (nx, ny) est franchissable (pas un mur)
-            if (Donjon::casevalide(nx, ny) == true){
-                position = {nx, ny};
-            }
-        }
-
-        bool estVivant(){
-            if (sante > 0){
-                return true;
-            }
-            return false;
-        }
-
-        void resoudreCase(Case* c){
-            if (typeid(c) == typeid(Monstre)){
-                string choix = "fuire";
-                cout << "Voulez vous combatre ou fuire ?" << endl;
-                cin >> choix;
-                if (choix == "combatre"){
-                    int r = rand() % 100;
-                    if (r < 50){ // valeur choisi arbitrairement 
-                        cout << "Combat perdu";
-                        sante -= 40; // valeur choisi arbitrairement 
-                    }
-                    else{
-                        cout << "Combat gagné";
-                        sante += 20; // valeur choisi arbitrairement 
-                    }
-                    
-                }
-                else if (choix == "fuire"){
-                    position = last_pos;
-                }
-                else{
-                    cout << "saisie incorrect" << endl;
-                    resoudreCase(c);
-                }
-            }
-            else if (typeid(c) == typeid(Tresor)){
-                inventaire += 1;
-                grille[position.first][position.second] =  CaseFactory::creerCase(TypeCase::PASSAGE);
-            }
-            else if (typeid(c) == typeid(Piege)){
-                inventaire -= 1; // valeur choisi arbitrairement
-            }
-        }
-
-        void afficherStatut(){
-            cout << "position courante : ";
-            cout << "(" << position.first << ", " << position.second << ")" << endl;
-            cout << "points de vie : " << sante << endl;
-            cout << "contenu de l'inventaire : " << inventaire << endl;
         }
 };
 
@@ -342,7 +279,7 @@ class Donjon{
             }
         }
 
-        static bool casevalide(int x, int y){
+        bool casevalide(int x, int y){
             if (typeid(grille[x][y]) != typeid(Mur)){
                 return true;
             }
@@ -405,6 +342,77 @@ class BFS{
 };
 
 // https://www.pointerlab.fr/blog/cpp-std-queue
+
+class Aventurier : public Case, Donjon {
+    private:
+        vector<vector<Case*>> grille;
+        pair<int, int> last_pos; // à mettre à jour lors avant le deplacement du joueur dans la boucle de jeu
+        pair<int, int> position;
+        int sante; // point de vie du joueur (initialiser à 100/100)
+        int inventaire; // nombre de tresor ramasser par le joueur
+    
+    public:
+        Aventurier(vector<vector<Case*>>& grille, const pair<int, int>& last_pos = {0, 0}, const pair<int, int>& position = {0, 0}, const int sante = 100, const int inventaire = 0) : Donjon(grille), last_pos(last_pos), position(position), sante(sante), inventaire(inventaire) {}
+
+        char afficher () override {
+            return '@';
+        }
+
+        void deplacer(int nx, int ny){
+            // precondition : la case (nx, ny) est franchissable (pas un mur)
+            if (Donjon::casevalide(nx, ny) == true){
+                position = {nx, ny};
+            }
+        }
+
+        bool estVivant(){
+            if (sante > 0){
+                return true;
+            }
+            return false;
+        }
+
+        void resoudreCase(Case* c){
+            if (typeid(c) == typeid(Monstre)){
+                string choix = "fuire";
+                cout << "Voulez vous combatre ou fuire ?" << endl;
+                cin >> choix;
+                if (choix == "combatre"){
+                    int r = rand() % 100;
+                    if (r < 50){ // valeur choisi arbitrairement 
+                        cout << "Combat perdu";
+                        sante -= 40; // valeur choisi arbitrairement 
+                    }
+                    else{
+                        cout << "Combat gagné";
+                        sante += 20; // valeur choisi arbitrairement 
+                    }
+                    
+                }
+                else if (choix == "fuire"){
+                    position = last_pos;
+                }
+                else{
+                    cout << "saisie incorrect" << endl;
+                    resoudreCase(c);
+                }
+            }
+            else if (typeid(c) == typeid(Tresor)){
+                inventaire += 1;
+                grille[position.first][position.second] =  CaseFactory::creerCase(TypeCase::PASSAGE);
+            }
+            else if (typeid(c) == typeid(Piege)){
+                inventaire -= 1; // valeur choisi arbitrairement
+            }
+        }
+
+        void afficherStatut(){
+            cout << "position courante : ";
+            cout << "(" << position.first << ", " << position.second << ")" << endl;
+            cout << "points de vie : " << sante << endl;
+            cout << "contenu de l'inventaire : " << inventaire << endl;
+        }
+};
 
 int main(){
     Donjon d;

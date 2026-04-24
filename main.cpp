@@ -7,6 +7,7 @@
 #include <queue>
 #include <map>
 #include <memory>
+#include <utility> // for pair
 
 using namespace std;
 
@@ -88,13 +89,19 @@ class Piege : public Case {
         }
 };
 
-class Aventurier{
+class Aventurier : public Case, Donjon {
     private:
+        vector<vector<Case*>> grille;
+        pair<int, int> last_pos; // à mettre à jour lors avant le deplacement du joueur dans la boucle de jeu
         pair<int, int> position;
         int sante; // point de vie du joueur (initialiser à 100/100)
         int inventaire; // nombre de tresor ramasser par le joueur
     public:
-        Aventurier(const pair<int, int>& position = {0, 0}, const int sante = 100, const int inventaire = 0) : position(position), sante(sante), inventaire(inventaire) {}
+        Aventurier(vector<vector<Case*>>& grille, const pair<int, int>& last_pos = {0, 0}, const pair<int, int>& position = {0, 0}, const int sante = 100, const int inventaire = 0) : Donjon(grille), last_pos(last_pos), position(position), sante(sante), inventaire(inventaire) {}
+
+        char afficher () override {
+            return '@';
+        }
 
         void deplacer(int nx, int ny){
             // precondition : la case (nx, ny) est franchissable (pas un mur)
@@ -104,10 +111,44 @@ class Aventurier{
         }
 
         bool estVivant(){
-            if (this->sante > 0){
+            if (sante > 0){
                 return true;
             }
             return false;
+        }
+
+        void resoudreCase(Case* c){
+            if (typeid(c) == typeid(Monstre)){
+                string choix = "fuire";
+                cout << "Voulez vous combatre ou fuire ?" << endl;
+                cin >> choix;
+                if (choix == "combatre"){
+                    int r = rand() % 100;
+                    if (r < 50){ // valeur choisi arbitrairement 
+                        cout << "Combat perdu";
+                        sante -= 40; // valeur choisi arbitrairement 
+                    }
+                    else{
+                        cout << "Combat gagné";
+                        sante += 20; // valeur choisi arbitrairement 
+                    }
+                    
+                }
+                else if (choix == "fuire"){
+                    position = last_pos;
+                }
+                else{
+                    cout << "saisie incorrect" << endl;
+                    resoudreCase(c);
+                }
+            }
+            else if (typeid(c) == typeid(Tresor)){
+                inventaire += 1;
+                grille[position.first][position.second] =  CaseFactory::creerCase(TypeCase::PASSAGE);
+            }
+            else if (typeid(c) == typeid(Piege)){
+                inventaire -= 1; // valeur choisi arbitrairement
+            }
         }
 
         void afficherStatut(){
@@ -172,8 +213,8 @@ class Donjon{
         }
 
         void afficher(){
-            for (int i=0; i < this->largeur; i++){
-                for (int j=0; j < this->hauteur; j++){
+            for (int i=0; i < largeur; i++){
+                for (int j=0; j < hauteur; j++){
                     Case* g = &grille[i][j][0];
                     cout << g->afficher();
                 }
@@ -220,6 +261,7 @@ class Donjon{
 
         void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
             grille[x][y][0].SetV(true);
+            this->grille = grille;
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
 
             for (string d : directions){
@@ -243,14 +285,14 @@ class Donjon{
                     ny = y;
                 }
 
-                bool c1 = (0 < nx < this->largeur);
-                bool c2 = (0 < ny < this->hauteur);
+                bool c1 = (0 < nx < largeur);
+                bool c2 = (0 < ny < hauteur);
 
                 if (c1 == true && c2 == true){
                     //Passage* p;
                     //Case* grille[nx][ny]{p};
                     grille[nx][ny] = CaseFactory::creerCase(TypeCase::PASSAGE);
-                    return genererLabyrinthe(this->grille, nx, ny);
+                    return genererLabyrinthe(grille, nx, ny);
                 }
             }
         }
@@ -261,14 +303,14 @@ class Donjon{
         }
 
         Case* poserSortie(const vector<vector<Case*>>& grille){
-            Case* sortie = grille[this->largeur][this->hauteur];
+            Case* sortie = grille[largeur][hauteur];
             return sortie;
         }
 
         vector<vector<Case*>> initialiserGrille(int largeur, int hauteur){
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
-                    this->grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
                     //Mur* m;
                     //Case* grille[i][j]{m};
                 }
@@ -280,24 +322,15 @@ class Donjon{
         }
 
         void placerElement(vector<vector<Case*>>& grille){
-            for (int i=0; i < this->largeur; i++){
-                for (int j=0; j < this->hauteur; j++){
+            for (int i=0; i < largeur; i++){
+                for (int j=0; j < hauteur; j++){
                     if (typeid(grille[i][j][0]) == typeid(Passage)){
                         int r = rand() % 100;
                         if (r < 5){
                             grille[i][j] = CaseFactory::creerCase(TypeCase::TRESOR);
-                            //grille[i][j].assign(1, CaseFactory::creerCase(TypeCase::TRESOR));
-                            //Case* newtresor = CaseFactory::creerCase(TypeCase::TRESOR);
-                            //grille[i][j] = newtresor;
-                            //Tresor* m;
-                            //Case* grille[i][j]{m};
                         }
                         else if (r < 10) {
                             grille[i][j] = CaseFactory::creerCase(TypeCase::MONSTRE);
-                            //Case* newmonstre = CaseFactory::creerCase(TypeCase::MONSTRE);
-                            //grille[i][j] = newmonstre;
-                            //Monstre* m;
-                            //Case* grille[i][j]{m};
                         }
                         else if (r < 13) {
                             grille[i][j] = CaseFactory::creerCase(TypeCase::PIEGE);
@@ -381,7 +414,7 @@ int main(){
     d.afficher();
 
     BFS bfs;
-    bfs.trouverChemin(grille, 0, 10);
+    bfs.trouverChemin(grille, {0, 0}, {grille[0].size(), grille.size()});
 
     return 0;
 }

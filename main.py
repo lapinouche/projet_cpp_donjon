@@ -308,48 +308,56 @@ class Donjon{
         }
 };
 
-
 class BFS{
     private:
-        queue<int> file;
-        vector<bool> visite;
-        vector<int> parent;
+        queue<pair<int, int>> file;
+        vector<vector<pair<int, int>>> parent;
 
     public:
-        BFS(const queue<int> f = {}, const vector<bool> v = {}, const vector<int> p = {}) : file(f), visite(v), parent(p) {}
+        BFS(const queue<pair<int, int>> f = {}, const vector<vector<pair<int, int>>>& p = {}) : file(f), parent(p) {}
         
-        queue<int> trouverChemin(vector<vector<Case*>> grille, int depart, int arrivee){
-            queue<int> file;
-            vector<bool> visite;
-            vector<int> parent;
+        queue<pair<int, int>> trouverChemin(vector<vector<Case*>> grille, pair<int, int> depart = {0, 0}, pair<int, int> arrivee = {5, 0}){
+            queue<pair<int, int>> file = {};
+            vector<vector<bool>> visite(grille.size(), vector<bool>(grille[0].size(),false));
+            vector<vector<pair<int, int>>> parent(grille.size(), vector<pair<int, int>>(grille[0].size(), {-1, 1}));
         
             enfiler(file, depart);
-            visite[depart] = true;
+            visite[depart.first][depart.second] = true;
 
-            this->visite[depart] = true;
             while(file.empty() == false){
-                int courant = file.back(); // front or back !??#?
+                pair<int, int> courant = file.back(); // front or back !??#?
                 if (courant == arrivee){
                     return reconstruireChemin(parent, depart, arrivee);
+                }
+
+                for (int i = (courant.first - 1) ; i < (courant.first + 2); i++){
+                    for (int j = (courant.second - 1) ; j < (courant.second + 2); j++){
+                        pair<int, int> v = {i, j};
+                        if ((-1 < v.first < grille[0].size()) && (-1 < v.second < grille.size()) && visite[v.first][v.second] == false && typeid(grille[v.first][v.second]) != typeid(Mur)){
+                            visite[v.first][v.second] = true;
+                            parent[v.first][v.second] = courant;
+                            enfiler(file, v);
+                        }
+                    }
                 }
             }
             return {};
         }
 
-        queue<int> reconstruireChemin(const vector<int>& parent, int depart, int arrivee){
-            queue<int> chemin;
-            int courant = arrivee;
+        queue<pair<int, int>> reconstruireChemin(const vector<vector<pair<int, int>>>& parent, pair<int, int> depart, pair<int, int> arrivee){
+            queue<pair<int, int>> chemin;
+            pair<int, int> courant = arrivee;
 
             while (courant != depart){
                 chemin.push(courant);
-                courant = parent[courant];
+                courant = parent[courant.first][courant.second];
             }
 
             chemin.front() = depart;
             return chemin;
         }
 
-        void enfiler(queue<int>& file, int depart){
+        void enfiler(queue<pair<int, int>>& file, pair<int, int> depart){
             file.front() = depart;
         }
 };

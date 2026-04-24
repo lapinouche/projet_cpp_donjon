@@ -17,21 +17,21 @@ using namespace std;
 
 class Case{
     protected:
-        vector<vector<bool>> visiter;
+        bool visiter;
 
     public:
-        Case(const vector<vector<bool>>& visiter = {}) : visiter(visiter) {}
+        Case(const bool& visiter = false) : visiter(visiter) {}
 
         virtual char afficher() = 0;
         virtual ~Case() = default;
 
-        vector<vector<bool>> SetV(const bool newstate, int x, int y){
-            visiter[x][y] = newstate;
+        bool SetV(const bool newstate){
+            visiter = newstate;
             return visiter;
         }
 
-        bool getV(int x, int y){
-            return visiter[x][y]; // à modifier
+        bool getV(){
+            return visiter; // à modifier
         }
 
         /*
@@ -42,7 +42,7 @@ class Case{
 
 class Mur : public Case {
     public :
-        Mur (const vector<vector<bool>>& visiter = {}) : Case(visiter) {}
+        Mur (const bool& visiter = false) : Case(visiter) {}
         char afficher () override {
             return '#' ;
         }
@@ -51,7 +51,7 @@ class Mur : public Case {
 
 class Passage : public Case {
     public : 
-        Passage(const vector<vector<bool>>& visiter = {}) : Case(visiter) {}
+        Passage(const bool& visiter = false) : Case(visiter) {}
         char afficher () override {
             return ' ' ;
         }
@@ -62,7 +62,7 @@ class Tresor : public Case {
         int valeur ;
 
     public :
-        Tresor (int v = 10, const vector<vector<bool>>& visiter = {}) : valeur(v), Case(visiter) {}
+        Tresor (int v = 10, const bool& visiter = false) : valeur(v), Case(visiter) {}
         char afficher () override {
             return '+';
         }
@@ -77,7 +77,7 @@ class Monstre : public Case {
         int pv ;
 
     public :
-        Monstre (int p = 20, const vector<vector<bool>>& visiter = {}) : pv(p), Case(visiter) {}
+        Monstre (int p = 20, const bool& visiter = false) : pv(p), Case(visiter) {}
         char afficher () override {
             return 'M';
         }
@@ -92,7 +92,7 @@ class Piege : public Case {
         int degats ;
 
     public :
-        Piege (int d = 15, const vector<vector<bool>>& visiter = {}) : degats(d), Case(visiter) {}
+        Piege (int d = 15, const bool& visiter = false) : degats(d), Case(visiter) {}
         char afficher () override {
             return 'T';
         }
@@ -189,8 +189,8 @@ class Donjon {
                     ny = y;
                 }
 
-                bool c1 = (0 < nx < this->largeur);
-                bool c2 = (0 < ny < this->hauteur);
+                bool c1 = (0 < nx < largeur);
+                bool c2 = (0 < ny < hauteur);
 
                 if (c1 == true && c2 == true){
                     if (typeid(grille[nx][ny][0]) == typeid(Passage)){
@@ -203,7 +203,7 @@ class Donjon {
         }
         
         void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
-            grille[x][y][0].SetV(true, x, y); // error : Assertion '__n < this->size()' failed.
+            grille[x][y][0].SetV(true); // error : Assertion '__n < this->size()' failed.
             this->grille = grille;
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
             melanger(directions);
@@ -233,9 +233,9 @@ class Donjon {
 
                 bool c1 = (0 < nx < largeur);
                 bool c2 = (0 < ny < hauteur);
-                bool v = grille[nx][ny][0].getV(nx, ny); //  error : Assertion '__n < this->size()' failed.
+                bool v = grille[nx][ny][0].getV(); //  error : Assertion '__n < this->size()' failed.
                 
-                if (c1 == true && c2 == true && v == false){ 
+                if (c1 == true && c2 == true ){  // && v == false
                     if (typeid(grille[mx][my]) == typeid(Mur)){
                         grille[mx][my] = CaseFactory::creerCase(TypeCase::PASSAGE);
                     }

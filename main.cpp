@@ -1,3 +1,5 @@
+// ERREUR LIGNE 206 ; 236
+
 #include <iostream>
 #include <vector>
 #include <array>
@@ -15,17 +17,21 @@ using namespace std;
 
 class Case{
     protected:
-        bool visiter;
+        vector<vector<bool>> visiter;
 
     public:
-        Case(const bool& visiter = false) : visiter(visiter) {}
+        Case(const vector<vector<bool>>& visiter = {}) : visiter(visiter) {}
 
         virtual char afficher() = 0;
         virtual ~Case() = default;
 
-        bool SetV(const bool newstate){
-            visiter = newstate;
+        vector<vector<bool>> SetV(const bool newstate, int x, int y){
+            visiter[x][y] = newstate;
             return visiter;
+        }
+
+        bool getV(int x, int y){
+            return visiter[x][y]; // à modifier
         }
 
         /*
@@ -36,7 +42,7 @@ class Case{
 
 class Mur : public Case {
     public :
-        Mur (const bool& visiter = false) : Case(visiter) {}
+        Mur (const vector<vector<bool>>& visiter = {}) : Case(visiter) {}
         char afficher () override {
             return '#' ;
         }
@@ -45,7 +51,7 @@ class Mur : public Case {
 
 class Passage : public Case {
     public : 
-        Passage(const bool& visiter = false) : Case(visiter) {}
+        Passage(const vector<vector<bool>>& visiter = {}) : Case(visiter) {}
         char afficher () override {
             return ' ' ;
         }
@@ -56,7 +62,7 @@ class Tresor : public Case {
         int valeur ;
 
     public :
-        Tresor (int v = 10, const bool& visiter = false) : valeur(v), Case(visiter) {}
+        Tresor (int v = 10, const vector<vector<bool>>& visiter = {}) : valeur(v), Case(visiter) {}
         char afficher () override {
             return '+';
         }
@@ -71,7 +77,7 @@ class Monstre : public Case {
         int pv ;
 
     public :
-        Monstre (int p = 20, const bool& visiter = false) : pv(p), Case(visiter) {}
+        Monstre (int p = 20, const vector<vector<bool>>& visiter = {}) : pv(p), Case(visiter) {}
         char afficher () override {
             return 'M';
         }
@@ -86,7 +92,7 @@ class Piege : public Case {
         int degats ;
 
     public :
-        Piege (int d = 15, const bool& visiter = false) : degats(d), Case(visiter) {}
+        Piege (int d = 15, const vector<vector<bool>>& visiter = {}) : degats(d), Case(visiter) {}
         char afficher () override {
             return 'T';
         }
@@ -127,7 +133,7 @@ class CaseFactory {
         }
 };
 
-class Donjon{
+class Donjon {
     private:
         vector<vector<Case*>> grille;
         int largeur;
@@ -139,12 +145,12 @@ class Donjon{
         void generer(int largeur, int hauteur){
             this->largeur = largeur;
             this->hauteur = hauteur;
-            //map<int, Case*> piece = {{0, Mur()}, {1, Passage()}, {2, Tresor()}, {3, Monstre()}, {4, Piege()}};
+            vector<vector<Case*>> newgrille(largeur, vector<Case*>(hauteur, nullptr));
+            this->grille = newgrille;
+            
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
-                    this->grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
-                    //Mur* m;
-                    //Case* grille[i][j]{m};
+                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
                 }
             }
         }
@@ -195,43 +201,64 @@ class Donjon{
             }
             return {};
         }
-
+        
         void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
-            grille[x][y][0].SetV(true);
+            grille[x][y][0].SetV(true, x, y); // error : Assertion '__n < this->size()' failed.
             this->grille = grille;
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
+            melanger(directions);
 
             for (string d : directions){
-                int nx;
-                int ny;
+                // nouvelle case
+                int nx; int ny;
+                // case entre la position actuelle et la nouvelle case
+                int mx; int my;
 
                 if (d == "NORD"){
-                    nx = x;
-                    ny = y + 1;
+                    nx = x; ny = y + 2;
+                    mx = x; my = y + 1;
                 }
                 if (d == "SUD"){
-                    nx = x;
-                    ny = y - 1;
+                    nx = x; ny = y - 2;
+                    mx = x; my = y - 1;
                 }
                 if (d == "EST"){
-                    nx = x + 1;
-                    ny = y;
+                    nx = x + 2; ny = y;
+                    mx = x + 1; my = y;
                 }
                 if (d == "OUEST"){
-                    nx = x - 1;
-                    ny = y;
+                    nx = x - 2; ny = y;
+                    mx = x - 1; my = y;
                 }
 
                 bool c1 = (0 < nx < largeur);
                 bool c2 = (0 < ny < hauteur);
-
-                if (c1 == true && c2 == true){
-                    //Passage* p;
-                    //Case* grille[nx][ny]{p};
-                    grille[nx][ny] = CaseFactory::creerCase(TypeCase::PASSAGE);
+                bool v = grille[nx][ny][0].getV(nx, ny); //  error : Assertion '__n < this->size()' failed.
+                
+                if (c1 == true && c2 == true && v == false){ 
+                    if (typeid(grille[mx][my]) == typeid(Mur)){
+                        grille[mx][my] = CaseFactory::creerCase(TypeCase::PASSAGE);
+                    }
                     return genererLabyrinthe(grille, nx, ny);
                 }
             }
+        }
+
+        void melanger(vector<string> directions){ // à modifier
+            int r = rand()%81;
+            if (r < 20){
+                directions = {"SUD", "EST", "NORD", "OUEST"};
+            }
+            else if (r < 40){
+                directions = {"OUEST", "NORD", "EST", "SUD"};
+            }
+            else if (r < 60){
+                directions = { "EST", "OUEST", "NORD", "SUD"};
+            }
+            else{
+                directions = {"NORD", "EST",  "SUD", "OUEST"};
+            }
+            //random_shuffle(directions.begin(), directions.end());
         }
 
         Case* poserEntree(const vector<vector<Case*>>& grille){
@@ -240,19 +267,13 @@ class Donjon{
         }
 
         Case* poserSortie(const vector<vector<Case*>>& grille){
-            Case* sortie = grille[largeur][hauteur];
+            Case* sortie = grille[(largeur-1)][(hauteur-1)];
             return sortie;
         }
 
         vector<vector<Case*>> initialiserGrille(int largeur, int hauteur){
-            for (int i=0; i < largeur; i++){
-                for (int j=0; j < hauteur; j++){
-                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
-                    //Mur* m;
-                    //Case* grille[i][j]{m};
-                }
-            }
-            genererLabyrinthe(grille, 1, 1);
+            generer(largeur, hauteur);
+            genererLabyrinthe(grille, 1, 1); // error with this method
             poserEntree(grille);
             poserSortie(grille);
             return grille;
@@ -416,13 +437,15 @@ class Aventurier : public Case, Donjon {
 
 int main(){
     Donjon d;
-    d.generer(22, 10);
+    
     vector<vector<Case*>> grille = d.initialiserGrille(22, 10);
+    /*
     d.placerElement(grille);
+    
     d.afficher();
 
     BFS bfs;
     bfs.trouverChemin(grille, {0, 0}, {grille[0].size(), grille.size()});
-
+    */
     return 0;
 }

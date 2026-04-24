@@ -98,7 +98,9 @@ class Aventurier{
 
         void deplacer(int nx, int ny){
             // precondition : la case (nx, ny) est franchissable (pas un mur)
-            this->position = {nx, ny};
+            if (Donjon::casevalide(nx, ny) == true){
+                position = {nx, ny};
+            }
         }
 
         bool estVivant(){
@@ -305,6 +307,13 @@ class Donjon{
                     }
                 }
             }
+        }
+
+        static bool casevalide(int x, int y){
+            if (typeid(grille[x][y]) != typeid(Mur)){
+                return true;
+            }
+            return false;
         }
 };
 

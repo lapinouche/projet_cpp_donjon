@@ -142,19 +142,6 @@ class Donjon {
     public:
         Donjon(const vector<vector<Case*>>& grille = {}, const int l=0, const int h=0) : largeur(l), hauteur(h), grille(grille) {}
 
-        void generer(int largeur, int hauteur){
-            this->largeur = largeur;
-            this->hauteur = hauteur;
-            vector<vector<Case*>> newgrille(largeur, vector<Case*>(hauteur, nullptr));
-            this->grille = newgrille;
-            
-            for (int i=0; i < largeur; i++){
-                for (int j=0; j < hauteur; j++){
-                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
-                }
-            }
-        }
-
         void afficher(){
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
@@ -201,9 +188,22 @@ class Donjon {
             }
             return {};
         }
+
+        void generer(int largeur, int hauteur){
+            this->largeur = largeur;
+            this->hauteur = hauteur;
+            vector<vector<Case*>> newgrille(largeur, vector<Case*>(hauteur, nullptr));
+            this->grille = newgrille;
+            
+            for (int i=0; i < largeur; i++){
+                for (int j=0; j < hauteur; j++){
+                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                }
+            }
+        }
         
-        void genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
-            grille[x][y][0].SetV(true); // error : Assertion '__n < this->size()' failed.
+        vector<vector<Case*>> genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
+            grille[x][y]->SetV(true); // error : Assertion '__n < this->size()' failed.
             this->grille = grille;
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
             melanger(directions);
@@ -233,7 +233,7 @@ class Donjon {
 
                 bool c1 = (0 < nx < largeur);
                 bool c2 = (0 < ny < hauteur);
-                bool v = grille[nx][ny][0].getV(); //  error : Assertion '__n < this->size()' failed.
+                bool v = grille[nx][ny]->getV(); //  error : Assertion '__n < this->size()' failed.
                 
                 if (c1 == true && c2 == true ){  // && v == false
                     if (typeid(grille[mx][my]) == typeid(Mur)){
@@ -242,6 +242,7 @@ class Donjon {
                     return genererLabyrinthe(grille, nx, ny);
                 }
             }
+            return grille;
         }
 
         void melanger(vector<string> directions){ // à modifier

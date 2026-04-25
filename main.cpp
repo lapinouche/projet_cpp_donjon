@@ -1,4 +1,4 @@
-// ERREUR LIGNE 206 ; 236
+// ERREUR LIGNE 206 ; 235
 
 #include <iostream>
 #include <vector>
@@ -188,7 +188,7 @@ class Donjon {
             }
             return {};
         }
-
+        
         void generer(int largeur, int hauteur){
             this->largeur = largeur;
             this->hauteur = hauteur;
@@ -201,10 +201,9 @@ class Donjon {
                 }
             }
         }
-        
-        vector<vector<Case*>> genererLabyrinthe(vector<vector<Case*>> grille, int x, int y){ 
+
+        void genererLabyrinthe(int x, int y){ 
             grille[x][y]->SetV(true); // error : Assertion '__n < this->size()' failed.
-            this->grille = grille;
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
             melanger(directions);
 
@@ -235,14 +234,14 @@ class Donjon {
                 bool c2 = (0 < ny < hauteur);
                 bool v = grille[nx][ny]->getV(); //  error : Assertion '__n < this->size()' failed.
                 
-                if (c1 == true && c2 == true ){  // && v == false
+                if (c1 == true && c2 == true && v == false){ 
                     if (typeid(grille[mx][my]) == typeid(Mur)){
                         grille[mx][my] = CaseFactory::creerCase(TypeCase::PASSAGE);
                     }
-                    return genererLabyrinthe(grille, nx, ny);
+                    return genererLabyrinthe(nx, ny);
                 }
             }
-            return grille;
+            //return grille;
         }
 
         void melanger(vector<string> directions){ // à modifier
@@ -262,22 +261,22 @@ class Donjon {
             //random_shuffle(directions.begin(), directions.end());
         }
 
-        Case* poserEntree(const vector<vector<Case*>>& grille){
+        Case* poserEntree(){ // const vector<vector<Case*>>& grille
             Case* entree = grille[0][0];
             return entree;
         }
 
-        Case* poserSortie(const vector<vector<Case*>>& grille){
+        Case* poserSortie(){ // const vector<vector<Case*>>& grille
             Case* sortie = grille[(largeur-1)][(hauteur-1)];
             return sortie;
         }
 
-        vector<vector<Case*>> initialiserGrille(int largeur, int hauteur){
+        void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
             generer(largeur, hauteur);
-            genererLabyrinthe(grille, 1, 1); // error with this method
-            poserEntree(grille);
-            poserSortie(grille);
-            return grille;
+            genererLabyrinthe(1, 1); // (grille, 1, 1) error with this method
+            poserEntree(); // (grille)
+            poserSortie(); // (grille)
+            //return grille;
         }
 
         void placerElement(vector<vector<Case*>>& grille){
@@ -438,8 +437,8 @@ class Aventurier : public Case, Donjon {
 
 int main(){
     Donjon d;
-    
-    vector<vector<Case*>> grille = d.initialiserGrille(22, 10);
+    d.initialiserGrille(22, 10);
+    //vector<vector<Case*>> grille = d.initialiserGrille(22, 10);
     /*
     d.placerElement(grille);
     

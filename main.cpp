@@ -1,90 +1,81 @@
-// ERREUR LIGNE 206 ; 235
-
 #include <iostream>
 #include <vector>
+#include <string>
+#include <cstdlib> // for random
+#include <queue>
+#include <utility> // for pair
+#include <typeinfo>
+
+// Non utiliser pour le moment
+/*
+#include <memory>
+#include <math.h>
 #include <array>
 #include <map>
-#include <cstdlib> // for random
-#include <math.h>
-#include <queue>
-#include <map>
-#include <memory>
-#include <utility> // for pair
 #include <stdexcept> // for throwing error
-
+*/
 
 using namespace std;
 
+enum class TypeCase {
+    MUR,
+    PASSAGE,
+    TRESOR,
+    MONSTRE,
+    PIEGE
+};
+
 class Case{
-    protected:
-        bool visiter;
-
     public:
+        bool visiter;
         Case(const bool& visiter = false) : visiter(visiter) {}
-
-        virtual char afficher() = 0;
         virtual ~Case() = default;
 
-        bool SetV(const bool newstate){
-            visiter = newstate;
-            return visiter;
-        }
-
-        bool getV(){
-            return visiter; // à modifier
-        }
+        virtual char afficher() = 0;
+        virtual TypeCase getType() const = 0; // Must be const to match children
+        
+        void SetV(bool newstate){ this->visiter = newstate; }
+        bool getV() const{ return visiter; }
 
         /*
+        // to be done later
         void boucleDeJeu(Donjon& d){
-
         }*/
 };
 
 class Mur : public Case {
     public :
         Mur (const bool& visiter = false) : Case(visiter) {}
-        char afficher () override {
-            return '#' ;
-        }
+        TypeCase getType() const override { return TypeCase::MUR; }
+        char afficher () override { return '#' ; }
 };
 
 
 class Passage : public Case {
     public : 
         Passage(const bool& visiter = false) : Case(visiter) {}
-        char afficher () override {
-            return ' ' ;
-        }
+        TypeCase getType() const override { return TypeCase::PASSAGE; }
+        char afficher () override { return ' ' ; }
 };
 
 class Tresor : public Case {
     private :
         int valeur ;
-
     public :
-        Tresor (int v = 10, const bool& visiter = false) : valeur(v), Case(visiter) {}
-        char afficher () override {
-            return '+';
-        }
-
-        int getValeur () const {
-            return valeur ;
-        }
+        Tresor (int v = 10, const bool& visiter = false) : Case(visiter), valeur(v) {}
+        TypeCase getType() const override { return TypeCase::TRESOR; }
+        char afficher () override { return '+'; }
+        int getValeur () const { return valeur ; }
 };
 
 class Monstre : public Case {
     private :
         int pv ;
-
     public :
         Monstre (int p = 20, const bool& visiter = false) : pv(p), Case(visiter) {}
-        char afficher () override {
-            return 'M';
-        }
-
-        int getPv () const {
-            return pv ;
-        }
+        TypeCase getType() const override { return TypeCase::MONSTRE; }
+        char afficher () override { return 'M'; }
+        int getPv () const { return pv ; }
 };
 
 class Piege : public Case {
@@ -93,21 +84,9 @@ class Piege : public Case {
 
     public :
         Piege (int d = 15, const bool& visiter = false) : degats(d), Case(visiter) {}
-        char afficher () override {
-            return 'T';
-        }
-
-        int getDegats () const {
-            return degats;
-        }
-};
-
-enum class TypeCase {
-    MUR,
-    PASSAGE,
-    TRESOR,
-    MONSTRE,
-    PIEGE
+        TypeCase getType() const override { return TypeCase::PIEGE; }
+        char afficher () override { return 'T'; }
+        int getDegats () const { return degats; }
 };
 
 class CaseFactory {
@@ -134,23 +113,105 @@ class CaseFactory {
 };
 
 class Donjon {
-    private:
+    protected: // protected, like this Aventurier can see it
         vector<vector<Case*>> grille;
         int largeur;
         int hauteur;
 
     public:
-        Donjon(const vector<vector<Case*>>& grille = {}, const int l=0, const int h=0) : largeur(l), hauteur(h), grille(grille) {}
+        Donjon() : largeur(0), hauteur(0) {}
+        Donjon(const vector<vector<Case*>>& g, const int l=0, const int h=0) : largeur(l), hauteur(h), grille(g) {}
 
         void afficher(){
-            for (int i=0; i < largeur; i++){
-                for (int j=0; j < hauteur; j++){
-                    Case* g = &grille[i][j][0];
-                    cout << g->afficher();
+            for (int j=0; j < hauteur; j++){
+                for (int i=0; i < largeur; i++){
+                    cout << grille[i][j]->afficher();
                 }
                 cout << endl;
             }
-            cout << endl;
+        }
+
+        void melanger(vector<string> directions){ // à modifier
+            for (int i = directions.size() - 1; i > 0; i--) {
+                int j = rand() % (i + 1);
+                swap(directions[i], directions[j]);
+            }
+        }
+
+        void generer(int largeur, int hauteur){
+            this->largeur = largeur;
+            this->hauteur = hauteur;
+            grille.assign(largeur, vector<Case*>(hauteur, nullptr));
+            //vector<vector<Case*>> newgrille(largeur, vector<Case*>(hauteur, nullptr));
+            //this->grille = newgrille;
+            
+            for (int i=0; i < largeur; i++){
+                for (int j=0; j < hauteur; j++){
+                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
+                }
+            }
+        }
+
+        void genererLabyrinthe(int x, int y){ 
+            grille[x][y]->SetV(true); // error : Assertion '__n < this->size()' failed.
+            vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
+            melanger(directions);
+
+            for (string d : directions){
+                // nouvelle case
+                int nx, ny;
+                // case entre la position actuelle et la nouvelle case
+                int mx, my;
+
+                if (d == "NORD"){
+                    nx = x; ny = y + 2;
+                    mx = x; my = y + 1;
+                }
+                if (d == "SUD"){
+                    nx = x; ny = y - 2;
+                    mx = x; my = y - 1;
+                }
+                if (d == "EST"){
+                    nx = x + 2; ny = y;
+                    mx = x + 1; my = y;
+                }
+                if (d == "OUEST"){
+                    nx = x - 2; ny = y;
+                    mx = x - 1; my = y;
+                }
+
+                bool boundsCheck = (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur);
+                /*bool v = grille[nx][ny]->Case::getV();*/ //  error : Assertion '__n < this->size()' failed.
+                
+                if (boundsCheck){ 
+                    if (!grille[nx][ny]->getV()){
+                        // Carve a path
+                        delete grille[mx][my];
+                        grille[mx][my] = CaseFactory::creerCase(TypeCase::PASSAGE);
+                        delete grille[nx][ny];
+                        grille[nx][ny] = CaseFactory::creerCase(TypeCase::PASSAGE);
+                        
+                        genererLabyrinthe(nx, ny);
+                    }
+                }
+            }
+        } //return grille;
+
+        Case* poserEntree(){ // const vector<vector<Case*>>& grille
+            Case* entree = grille[1][1]; //grille[0][0];
+            return entree;
+        }
+
+        Case* poserSortie(){ // const vector<vector<Case*>>& grille
+            Case* sortie = grille[(largeur-1)][(hauteur-1)];
+            return sortie;
+        }
+
+        void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
+            generer(largeur, hauteur);
+            poserEntree();
+            poserSortie();
+            genererLabyrinthe(1, 1);
         }
 
         vector<pair<int, int>> trouverChemin(int x, int y){
@@ -176,11 +237,11 @@ class Donjon {
                     ny = y;
                 }
 
-                bool c1 = (0 < nx < largeur);
-                bool c2 = (0 < ny < hauteur);
+                bool c1 = (nx >= 0 && nx < largeur);
+                bool c2 = (ny >= 0 && ny < hauteur);
 
                 if (c1 == true && c2 == true){
-                    if (typeid(grille[nx][ny][0]) == typeid(Passage)){
+                    if (grille[nx][ny]->getType() == TypeCase::PASSAGE){
                         vector<pair<int, int>> chemin = {{nx, ny}};
                         return chemin;
                     }
@@ -188,101 +249,11 @@ class Donjon {
             }
             return {};
         }
-        
-        void generer(int largeur, int hauteur){
-            this->largeur = largeur;
-            this->hauteur = hauteur;
-            vector<vector<Case*>> newgrille(largeur, vector<Case*>(hauteur, nullptr));
-            this->grille = newgrille;
-            
-            for (int i=0; i < largeur; i++){
-                for (int j=0; j < hauteur; j++){
-                    grille[i][j] = CaseFactory::creerCase(TypeCase::MUR);
-                }
-            }
-        }
 
-        void genererLabyrinthe(int x, int y){ 
-            grille[x][y]->SetV(true); // error : Assertion '__n < this->size()' failed.
-            vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
-            melanger(directions);
-
-            for (string d : directions){
-                // nouvelle case
-                int nx; int ny;
-                // case entre la position actuelle et la nouvelle case
-                int mx; int my;
-
-                if (d == "NORD"){
-                    nx = x; ny = y + 2;
-                    mx = x; my = y + 1;
-                }
-                if (d == "SUD"){
-                    nx = x; ny = y - 2;
-                    mx = x; my = y - 1;
-                }
-                if (d == "EST"){
-                    nx = x + 2; ny = y;
-                    mx = x + 1; my = y;
-                }
-                if (d == "OUEST"){
-                    nx = x - 2; ny = y;
-                    mx = x - 1; my = y;
-                }
-
-                bool c1 = (0 < nx < largeur);
-                bool c2 = (0 < ny < hauteur);
-                bool v = grille[nx][ny]->getV(); //  error : Assertion '__n < this->size()' failed.
-                
-                if (c1 == true && c2 == true && v == false){ 
-                    if (typeid(grille[mx][my]) == typeid(Mur)){
-                        grille[mx][my] = CaseFactory::creerCase(TypeCase::PASSAGE);
-                    }
-                    return genererLabyrinthe(nx, ny);
-                }
-            }
-            //return grille;
-        }
-
-        void melanger(vector<string> directions){ // à modifier
-            int r = rand()%81;
-            if (r < 20){
-                directions = {"SUD", "EST", "NORD", "OUEST"};
-            }
-            else if (r < 40){
-                directions = {"OUEST", "NORD", "EST", "SUD"};
-            }
-            else if (r < 60){
-                directions = { "EST", "OUEST", "NORD", "SUD"};
-            }
-            else{
-                directions = {"NORD", "EST",  "SUD", "OUEST"};
-            }
-            //random_shuffle(directions.begin(), directions.end());
-        }
-
-        Case* poserEntree(){ // const vector<vector<Case*>>& grille
-            Case* entree = grille[0][0];
-            return entree;
-        }
-
-        Case* poserSortie(){ // const vector<vector<Case*>>& grille
-            Case* sortie = grille[(largeur-1)][(hauteur-1)];
-            return sortie;
-        }
-
-        void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
-            generer(largeur, hauteur);
-            genererLabyrinthe(1, 1); // (grille, 1, 1) error with this method
-            poserEntree(); // (grille)
-            poserSortie(); // (grille)
-            //return grille;
-        }
-
-        void placerElement(vector<vector<Case*>>& grille){
-            for (int i=0; i < largeur; i++){
-                for (int j=0; j < hauteur; j++){
-                    if (typeid(grille[i][j][0]) == typeid(Passage)){
+        void placerElement(){ // vector<vector<Case*>>& grille
+            for (int j=0; j < hauteur; j++){
+                for (int i=0; i < largeur; i++){
+                    if (grille[i][j]->getType() == TypeCase::PASSAGE){
                         int r = rand() % 100;
                         if (r < 5){
                             grille[i][j] = CaseFactory::creerCase(TypeCase::TRESOR);
@@ -292,8 +263,6 @@ class Donjon {
                         }
                         else if (r < 13) {
                             grille[i][j] = CaseFactory::creerCase(TypeCase::PIEGE);
-                            //Piege* p;
-                            //Case* grille[i][j]{p};
                         }
                     }
                 }
@@ -301,10 +270,10 @@ class Donjon {
         }
 
         bool casevalide(int x, int y){
-            if (typeid(grille[x][y]) != typeid(Mur)){
-                return true;
+            if (x < 0 || x >= largeur || y < 0 || y >= hauteur ){
+                return false;
             }
-            return false;
+            return grille[x][y]->getType() != TypeCase::MUR;
         }
 };
 
@@ -436,14 +405,14 @@ class Aventurier : public Case, Donjon {
 };
 
 int main(){
+    srand(time(NULL));
     Donjon d;
-    d.initialiserGrille(22, 10);
-    //vector<vector<Case*>> grille = d.initialiserGrille(22, 10);
-    /*
-    d.placerElement(grille);
+    d.initialiserGrille(21, 11);
+    
+    //d.placerElement();
     
     d.afficher();
-
+    /*
     BFS bfs;
     bfs.trouverChemin(grille, {0, 0}, {grille[0].size(), grille.size()});
     */

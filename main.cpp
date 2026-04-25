@@ -1,3 +1,5 @@
+// ERREUR LIGNE 206 ; 236
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -6,7 +8,7 @@
 #include <utility> // for pair
 #include <typeinfo>
 
-// Non utiliser pour le moment
+//Not use yet
 /*
 #include <memory>
 #include <math.h>
@@ -65,6 +67,7 @@ class Tresor : public Case {
         Tresor (int v = 10, const bool& visiter = false) : Case(visiter), valeur(v) {}
         TypeCase getType() const override { return TypeCase::TRESOR; }
         char afficher () override { return '+'; }
+        void setValeur (int valeur) { this->valeur = valeur; }
         int getValeur () const { return valeur ; }
 };
 
@@ -72,9 +75,10 @@ class Monstre : public Case {
     private :
         int pv ;
     public :
-        Monstre (int p = 20, const bool& visiter = false) : pv(p), Case(visiter) {}
+        Monstre (int p = 20, const bool& visiter = false) :  Case(visiter), pv(p) {}
         TypeCase getType() const override { return TypeCase::MONSTRE; }
         char afficher () override { return 'M'; }
+        void setPv (int pv) { this->pv = pv; }
         int getPv () const { return pv ; }
 };
 
@@ -83,9 +87,10 @@ class Piege : public Case {
         int degats ;
 
     public :
-        Piege (int d = 15, const bool& visiter = false) : degats(d), Case(visiter) {}
+        Piege (int d = 15, const bool& visiter = false) : Case(visiter), degats(d) {}
         TypeCase getType() const override { return TypeCase::PIEGE; }
         char afficher () override { return 'T'; }
+        void setDegats (int degats) { this->degats = degats; }
         int getDegats () const { return degats; }
 };
 
@@ -101,6 +106,9 @@ class CaseFactory {
                 }
                 case TypeCase::TRESOR:{
                     return new Tresor();
+                }
+                case TypeCase::MONSTRE:{
+                    return new Monstre();
                 }
                 case TypeCase::PIEGE:{
                     return new Piege();
@@ -209,8 +217,8 @@ class Donjon {
 
         void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
             generer(largeur, hauteur);
-            poserEntree();
-            poserSortie();
+            //poserEntree();
+            //poserSortie();
             genererLabyrinthe(1, 1);
         }
 
@@ -255,15 +263,18 @@ class Donjon {
                 for (int i=0; i < largeur; i++){
                     if (grille[i][j]->getType() == TypeCase::PASSAGE){
                         int r = rand() % 100;
-                        if (r < 5){
+                        if (r < 5) {
+                            delete grille[i][j];
                             grille[i][j] = CaseFactory::creerCase(TypeCase::TRESOR);
-                        }
+                        } 
                         else if (r < 10) {
+                            delete grille[i][j];
                             grille[i][j] = CaseFactory::creerCase(TypeCase::MONSTRE);
                         }
                         else if (r < 13) {
+                            delete grille[i][j];
                             grille[i][j] = CaseFactory::creerCase(TypeCase::PIEGE);
-                        }
+                        } 
                     }
                 }
             }
@@ -277,15 +288,16 @@ class Donjon {
         }
 };
 
-class BFS{
+class BFS : public Donjon {
     private:
         queue<pair<int, int>> file;
         vector<vector<pair<int, int>>> parent;
 
     public:
-        BFS(const queue<pair<int, int>> f = {}, const vector<vector<pair<int, int>>>& p = {}) : file(f), parent(p) {}
+        BFS() = default; // tells the compiler to use the default empty state for both containers
+        BFS(vector<vector<Case*>>& grille, const queue<pair<int, int>> f, const vector<vector<pair<int, int>>>& p) : Donjon(grille), file(f), parent(p) {}
         
-        queue<pair<int, int>> trouverChemin(vector<vector<Case*>> grille, pair<int, int> depart = {0, 0}, pair<int, int> arrivee = {5, 0}){
+        queue<pair<int, int>> trouverChemin(pair<int, int> depart = {0, 0}, pair<int, int> arrivee = {5, 0}){
             queue<pair<int, int>> file = {};
             vector<vector<bool>> visite(grille.size(), vector<bool>(grille[0].size(),false));
             vector<vector<pair<int, int>>> parent(grille.size(), vector<pair<int, int>>(grille[0].size(), {-1, 1}));
@@ -335,7 +347,6 @@ class BFS{
 
 class Aventurier : public Case, Donjon {
     private:
-        vector<vector<Case*>> grille;
         pair<int, int> last_pos; // à mettre à jour lors avant le deplacement du joueur dans la boucle de jeu
         pair<int, int> position;
         int sante; // point de vie du joueur (initialiser à 100/100)
@@ -408,13 +419,11 @@ int main(){
     srand(time(NULL));
     Donjon d;
     d.initialiserGrille(21, 11);
-    
-    //d.placerElement();
-    
+    d.placerElement();
     d.afficher();
     /*
     BFS bfs;
-    bfs.trouverChemin(grille, {0, 0}, {grille[0].size(), grille.size()});
+    bfs.trouverChemin({0, 0}, {21, 11}); // {grille[0].size(), grille.size()}
     */
     return 0;
 }

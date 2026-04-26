@@ -24,7 +24,9 @@ enum class TypeCase {
     PASSAGE,
     TRESOR,
     MONSTRE,
-    PIEGE
+    PIEGE, 
+    ENTREE,
+    SORTIE
 };
 
 class Case{
@@ -38,9 +40,6 @@ class Case{
         
         void SetV(bool newstate){ this->visiter = newstate; }
         bool getV() const{ return visiter; }
-
-        char affichEntree(){ return 'E'; }
-        char affichSortie(){ return 'S'; }
         /*
         // to be done later
         void boucleDeJeu(Donjon& d){
@@ -96,6 +95,19 @@ class Piege : public Case {
         int getDegats () const { return degats; }
 };
 
+
+class Entree : public Case {
+    public:
+        TypeCase getType() const override { return TypeCase::ENTREE; }
+        char afficher() override { return 'E'; }
+};
+
+class Sortie : public Case {
+    public:
+        TypeCase getType() const override { return TypeCase::SORTIE; }
+        char afficher() override { return 'S'; }
+};
+
 class CaseFactory {
     public:
         static Case* creerCase(TypeCase type) {
@@ -114,6 +126,12 @@ class CaseFactory {
                 }
                 case TypeCase::PIEGE:{
                     return new Piege();
+                }
+                case TypeCase::ENTREE:{
+                    return new Entree();
+                }
+                case TypeCase::SORTIE:{
+                    return new Sortie();
                 }
                 default:{
                     return nullptr;
@@ -153,8 +171,6 @@ class Donjon {
             this->largeur = largeur;
             this->hauteur = hauteur;
             grille.assign(largeur, vector<Case*>(hauteur, nullptr));
-            //vector<vector<Case*>> newgrille(largeur, vector<Case*>(hauteur, nullptr));
-            //this->grille = newgrille;
             
             for (int i=0; i < largeur; i++){
                 for (int j=0; j < hauteur; j++){
@@ -198,7 +214,6 @@ class Donjon {
                 }
 
                 bool boundsCheck = (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur);
-                /*bool v = grille[nx][ny]->Case::getV();*/ //  error : Assertion '__n < this->size()' failed.
                 
                 if (boundsCheck){ 
                     if (!grille[nx][ny]->getV()){
@@ -214,12 +229,16 @@ class Donjon {
             }
         } //return grille;
 
-        void poserEntree(){ // const vector<vector<Case*>>& grille
-            grille[1][1]->affichEntree();
+
+        void poserEntree() {
+            delete grille[1][1];
+            grille[1][1] = new Entree(); 
         }
 
-        void poserSortie(){ // const vector<vector<Case*>>& grille
-            grille[(largeur-1)][(hauteur-1)]->affichSortie();
+        void poserSortie() {
+            // Note: Use largeur-2/hauteur-2 if the edges are walls!
+            delete grille[largeur-2][hauteur-2];
+            grille[largeur-2][hauteur-2] = new Sortie();
         }
 
         /*
@@ -238,6 +257,7 @@ class Donjon {
             genererLabyrinthe(1, 1);
             poserEntree();
             poserSortie();
+            placerElement();
         }
 
         vector<pair<int, int>> trouverChemin(int x, int y){
@@ -449,7 +469,6 @@ int main(){
     srand(time(NULL));
     Donjon d;
     d.initialiserGrille(21, 11);
-    d.placerElement();
     d.afficher();
     
     BFS bfs;

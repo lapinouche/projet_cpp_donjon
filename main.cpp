@@ -141,11 +141,12 @@ class Donjon {
             }
         }
 
-        void melanger(vector<string> directions){ // à modifier
+        vector<string> melanger(vector<string> directions){ // à modifier
             for (int i = directions.size() - 1; i > 0; i--) {
                 int j = rand() % (i + 1);
                 swap(directions[i], directions[j]);
             }
+            return directions;
         }
 
         void generer(int largeur, int hauteur){
@@ -165,7 +166,13 @@ class Donjon {
         void genererLabyrinthe(int x, int y){ 
             grille[x][y]->SetV(true); // error : Assertion '__n < this->size()' failed.
             vector<string> directions = {"NORD", "SUD", "EST", "OUEST"};
-            melanger(directions);
+            directions = melanger(directions);
+            /*
+            cout << "direction : ";
+            for(string d : directions){
+                cout << d << " ";
+            } 
+            cout << endl;*/
 
             for (string d : directions){
                 // nouvelle case
@@ -178,15 +185,15 @@ class Donjon {
                     mx = x; my = y + 1;
                 }
                 if (d == "SUD"){
-                    nx = x; ny = y - 2;
-                    mx = x; my = y - 1;
+                    nx = x; ny = y - 2; 
+                    mx = x; my = y - 1; 
                 }
                 if (d == "EST"){
                     nx = x + 2; ny = y;
                     mx = x + 1; my = y;
                 }
                 if (d == "OUEST"){
-                    nx = x - 2; ny = y;
+                    nx = x - 2; ny = y; 
                     mx = x - 1; my = y;
                 }
 
@@ -228,9 +235,9 @@ class Donjon {
 
         void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
             generer(largeur, hauteur);
+            genererLabyrinthe(1, 1);
             poserEntree();
             poserSortie();
-            genererLabyrinthe(1, 1);
         }
 
         vector<pair<int, int>> trouverChemin(int x, int y){
@@ -255,7 +262,6 @@ class Donjon {
                     nx = x - 1;
                     ny = y;
                 }
-
                 bool c1 = (nx >= 0 && nx < largeur);
                 bool c2 = (ny >= 0 && ny < hauteur);
 

@@ -39,6 +39,8 @@ class Case{
         void SetV(bool newstate){ this->visiter = newstate; }
         bool getV() const{ return visiter; }
 
+        char affichEntree(){ return 'E'; }
+        char affichSortie(){ return 'S'; }
         /*
         // to be done later
         void boucleDeJeu(Donjon& d){
@@ -205,6 +207,15 @@ class Donjon {
             }
         } //return grille;
 
+        void poserEntree(){ // const vector<vector<Case*>>& grille
+            grille[1][1]->affichEntree();
+        }
+
+        void poserSortie(){ // const vector<vector<Case*>>& grille
+            grille[(largeur-1)][(hauteur-1)]->affichSortie();
+        }
+
+        /*
         Case* poserEntree(){ // const vector<vector<Case*>>& grille
             Case* entree = grille[1][1]; //grille[0][0];
             return entree;
@@ -213,12 +224,12 @@ class Donjon {
         Case* poserSortie(){ // const vector<vector<Case*>>& grille
             Case* sortie = grille[(largeur-1)][(hauteur-1)];
             return sortie;
-        }
+        } */
 
         void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
             generer(largeur, hauteur);
-            //poserEntree();
-            //poserSortie();
+            poserEntree();
+            poserSortie();
             genererLabyrinthe(1, 1);
         }
 
@@ -296,28 +307,45 @@ class BFS : public Donjon {
     public:
         BFS() = default; // tells the compiler to use the default empty state for both containers
         BFS(vector<vector<Case*>>& grille, const queue<pair<int, int>> f, const vector<vector<pair<int, int>>>& p) : Donjon(grille), file(f), parent(p) {}
+
+        void setDonjonData(const vector<vector<Case*>>& g, int l, int h) {
+            this->grille = g;
+            this->largeur = l;
+            this->hauteur = h;
+        }
         
-        queue<pair<int, int>> trouverChemin(pair<int, int> depart = {0, 0}, pair<int, int> arrivee = {5, 0}){
-            queue<pair<int, int>> file = {};
-            vector<vector<bool>> visite(grille.size(), vector<bool>(grille[0].size(),false));
-            vector<vector<pair<int, int>>> parent(grille.size(), vector<pair<int, int>>(grille[0].size(), {-1, 1}));
+        queue<pair<int, int>> trouverChemin(pair<int, int> depart = {1, 1}, pair<int, int> arrivee = {5, 0}){
+            if (largeur == 0 || hauteur == 0) return {}; // Safety check
+
+            queue<pair<int, int>> file;
+            vector<vector<bool>> visite(largeur, vector<bool>(hauteur, false));
+            vector<vector<pair<int, int>>> parent(largeur, vector<pair<int, int>>(hauteur, {-1, -1}));
         
-            enfiler(file, depart);
+            file.push(depart); //enfiler(file, depart)
             visite[depart.first][depart.second] = true;
+            
+            while(!file.empty()){
+                pair<int, int> courant = file.front();
+                file.pop();
 
-            while(file.empty() == false){
-                pair<int, int> courant = file.back(); // front or back !??#?
-                if (courant == arrivee){
-                    return reconstruireChemin(parent, depart, arrivee);
-                }
+                if (courant == arrivee) return reconstruireChemin(parent, depart, arrivee);
 
-                for (int i = (courant.first - 1) ; i < (courant.first + 2); i++){
-                    for (int j = (courant.second - 1) ; j < (courant.second + 2); j++){
-                        pair<int, int> v = {i, j};
-                        if ((-1 < v.first < grille[0].size()) && (-1 < v.second < grille.size()) && visite[v.first][v.second] == false && typeid(grille[v.first][v.second]) != typeid(Mur)){
-                            visite[v.first][v.second] = true;
-                            parent[v.first][v.second] = courant;
-                            enfiler(file, v);
+                // Check 4 directions (N, S, E, O) 
+                // Note: Using i-1 to i+1 in a nested loop checks diagonals too. 
+                // If your game only allows 4-way movement, use a directions vector.
+                int dx[] = {0, 0, 1, -1};
+                int dy[] = {1, -1, 0, 0};
+
+                for (int i = 0; i < 4; i++) {
+                    int nx = courant.first + dx[i];
+                    int ny = courant.second + dy[i];
+
+                    // PROPER BOUNDS CHECK
+                    if (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur) {
+                        if (!visite[nx][ny] && grille[nx][ny]->getType() != TypeCase::MUR) {
+                            visite[nx][ny] = true;
+                            parent[nx][ny] = courant;
+                            file.push({nx,ny}); //enfiler(file, v)
                         }
                     }
                 }
@@ -336,10 +364,6 @@ class BFS : public Donjon {
 
             chemin.front() = depart;
             return chemin;
-        }
-
-        void enfiler(queue<pair<int, int>>& file, pair<int, int> depart){
-            file.front() = depart;
         }
 };
 
@@ -421,9 +445,16 @@ int main(){
     d.initialiserGrille(21, 11);
     d.placerElement();
     d.afficher();
-    /*
+    
     BFS bfs;
-    bfs.trouverChemin({0, 0}, {21, 11}); // {grille[0].size(), grille.size()}
-    */
+    bfs.initialiserGrille(21, 11);
+    queue<pair<int, int>> chemin = bfs.trouverChemin({1, 1}, {19, 9}); // {0, 0}, {21, 11}  --  {grille[0].size(), grille.size()}
+    
+    if(!chemin.empty()) {
+        cout << "Path found! Length: " << chemin.size() << endl;
+    } else {
+        cout << "No path found." << endl;
+    }
+
     return 0;
 }

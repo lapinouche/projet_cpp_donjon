@@ -1,5 +1,3 @@
-// ERREUR LIGNE 206 ; 236
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -118,11 +116,13 @@ class Aventurier : public Case {
         void afficherStatut(){
             cout << "position courante : ";
             cout << "(" << position.first << ", " << position.second << ")" << endl;
-            cout << "points de vie : " << sante << endl;
-            cout << "contenu de l'inventaire : " << inventaire << endl;
+            cout << "points de vie : " << sante << "/100" << endl;
+            cout << "Inventaire : " << inventaire << " tresors" << endl;
         }
 
         void setSante(int point_vie){ this->sante += point_vie; }
+        int getSante() { return this->sante; }
+        void SanteNull() { this->sante = 0; }
         void setInventaire(int newelement){ this->inventaire += newelement; }
         void updatePos(pair<int, int> newPos){ this->position = newPos; }
         void updateLastPos(pair<int, int> newPos){ this->last_pos = newPos; }
@@ -375,6 +375,9 @@ class Donjon {
             // precondition : la case (nx, ny) est franchissable (pas un mur)
             if (casevalide(nx, ny) == true){
                 perso.updatePos({nx, ny});
+                if (nx == 1 && ny == 1){
+                    poserEntree();
+                }
             }
         }
 
@@ -387,12 +390,19 @@ class Donjon {
                                 int r = rand() % 100;
                                 if (r < 50) { // valeur choisi arbitrairement 
                                         cout << "Combat perdu" << endl;
-                                        perso.setSante(-40); // valeur choisi arbitrairement 
+                                        if (perso.getSante() > 40){
+                                            perso.setSante(-40); // valeur choisi arbitrairement 
+                                        }
+                                        else{
+                                            perso.SanteNull();
+                                        }
                                 }
                                 else {
                                         cout << "Combat gagné" << endl;
-                                        perso.setSante(20); // valeur choisi arbitrairement 
-                                }    
+                                        if (perso.getSante() < 81) {
+                                            perso.setSante(20); // valeur choisi arbitrairement 
+                                        }
+                                }
                         }
                         else if (choix == "fuire") {
                                 perso.updatePos(perso.getLastPos());
@@ -427,6 +437,12 @@ class BFS : public Donjon {
             this->grille = g;
             this->largeur = l;
             this->hauteur = h;
+        }
+
+        void AffichDist(int x, int y){
+            queue<pair<int, int>> chemin = trouverChemin({x, y}, {largeur-2, hauteur-2});
+            int dist = chemin.size();
+            cout << "Distance a la sortie : " << dist << " cases" << endl;
         }
         
         queue<pair<int, int>> trouverChemin(pair<int, int> depart = {1, 1}, pair<int, int> arrivee = {5, 0}){
@@ -482,8 +498,20 @@ class BFS : public Donjon {
         }
 };
 
+void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, pair<int, int>& pos, int& nx, int& ny) {
+        if (d.casevalide(nx, ny)){
+        perso.updateLastPos(pos);
+        d.deplacer(perso, nx, ny);
+        d.resoudreCase(perso, d.getGrille(nx, ny));
+        d.afficher(perso);
+        perso.afficherStatut();
+        bfs.AffichDist(nx, ny);
+    } else {
+        cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
+    }
+}
 
-void boucleDeJeu(Donjon& d, Aventurier& perso){
+void boucleDeJeu(Donjon& d, Aventurier& perso, BFS& bfs){
     int largeur = 21;
     int hauteur = 11;
     bool running = true;
@@ -491,7 +519,6 @@ void boucleDeJeu(Donjon& d, Aventurier& perso){
     d.initialiserGrille(largeur, hauteur);
     d.afficher(perso);
             
-    BFS bfs;
     bfs.initialiserGrille(largeur, hauteur);
     queue<pair<int, int>> chemin = bfs.trouverChemin({1, 1}, {largeur-2, hauteur-2}); // {0, 0}, {21, 11}  --  {grille[0].size(), grille.size()}
 
@@ -505,58 +532,27 @@ void boucleDeJeu(Donjon& d, Aventurier& perso){
                 pair<int, int> last_pos = perso.getLastPos();
                 int nx;
                 int ny;
+
                 switch (key) {
                     case 'z': case 'Z':
                         nx = pos.first;
                         ny = pos.second -1;
-                        if (d.casevalide(nx, ny)){
-                            perso.updateLastPos(pos);
-                            d.deplacer(perso, nx, ny);
-                            d.resoudreCase(perso, d.getGrille(nx, ny));
-                            d.afficher(perso);
-                            perso.afficherStatut();
-                        } else {
-                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
-                        }
+                        execute_touche(d, bfs, perso, pos, nx, ny);
                         break;
                     case 's': case 'S':
                         nx = pos.first;
                         ny = pos.second + 1;
-                        if (d.casevalide(nx, ny)){
-                            perso.updateLastPos(pos);
-                            d.deplacer(perso, nx, ny);
-                            d.resoudreCase(perso, d.getGrille(nx, ny));
-                            d.afficher(perso);
-                            perso.afficherStatut();
-                        } else {
-                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
-                        }
+                        execute_touche(d, bfs, perso, pos, nx, ny);
                         break;
                     case 'q': case 'Q':
                         nx = pos.first - 1;
                         ny = pos.second;
-                        if (d.casevalide(nx, ny)){
-                            perso.updateLastPos(pos);
-                            d.deplacer(perso, nx, ny);
-                            d.resoudreCase(perso, d.getGrille(nx, ny));
-                            d.afficher(perso);
-                            perso.afficherStatut();
-                        } else {
-                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
-                        }
+                        execute_touche(d, bfs, perso, pos, nx, ny);
                         break;
                     case 'd': case 'D':
                         nx = pos.first + 1;
                         ny = pos.second;
-                        if (d.casevalide(nx, ny)){
-                            perso.updateLastPos(pos);
-                            d.deplacer(perso, nx, ny);
-                            d.resoudreCase(perso, d.getGrille(nx, ny));
-                            d.afficher(perso);
-                            perso.afficherStatut();
-                        } else {
-                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
-                        }
+                        execute_touche(d, bfs, perso, pos, nx, ny);
                         break;
                 }
                 if (!perso.estVivant()){
@@ -575,14 +571,15 @@ void boucleDeJeu(Donjon& d, Aventurier& perso){
         }
     } else {
         // creat the game until we have a path to exit
-        boucleDeJeu(d, perso);
+        boucleDeJeu(d, perso, bfs);
     }
 }
 
 int main(){
     Donjon d;
+    BFS bfs;
     Aventurier perso;
-    boucleDeJeu(d, perso);
+    boucleDeJeu(d, perso, bfs);
     return 0;
 }
 

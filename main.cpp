@@ -30,8 +30,6 @@ enum class TypeCase {
     AVENTURIER
 };
 
-class Donjon;
-
 class Case{
     public:
         bool visiter;

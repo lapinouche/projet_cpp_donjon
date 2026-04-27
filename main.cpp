@@ -186,10 +186,11 @@ class Donjon {
         vector<vector<Case*>> grille;
         int largeur;
         int hauteur;
+        bool condEntree;
 
     public:
-        Donjon() : largeur(0), hauteur(0) {}
-        Donjon(const vector<vector<Case*>>& g, const int l=0, const int h=0) : largeur(l), hauteur(h), grille(g) {}
+        Donjon() : largeur(0), hauteur(0), condEntree(true) {}
+        Donjon(const vector<vector<Case*>>& g, const int l=0, const int h=0, const bool cE=true) : largeur(l), hauteur(h), grille(g), condEntree(cE) {}
 
         void afficher(Aventurier& perso){
             for (int j=0; j < hauteur; j++){
@@ -300,7 +301,6 @@ class Donjon {
         void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
             generer(largeur, hauteur);
             genererLabyrinthe(1, 1);
-            poserEntree();
             poserSortie();
             poserAventurier(1, 1);
             placerElement();
@@ -338,7 +338,7 @@ class Donjon {
                     }
                 }
             }
-            cout << "Aucun chemin trouvé !" << endl;
+            cout << "Aucun chemin trouve !" << endl;
             return {};
         }
 
@@ -375,8 +375,11 @@ class Donjon {
             // precondition : la case (nx, ny) est franchissable (pas un mur)
             if (casevalide(nx, ny) == true){
                 perso.updatePos({nx, ny});
-                if (nx == 1 && ny == 1){
-                    poserEntree();
+                if (nx == 1 || ny == 1){
+                    if ((!(nx == 1 && ny == 1)) && condEntree){
+                        poserEntree();
+                        condEntree = false;
+                    }
                 }
             }
         }
@@ -492,14 +495,15 @@ class BFS : public Donjon {
                 chemin.push(courant);
                 courant = parent[courant.first][courant.second];
             }
-
-            chemin.front() = depart;
+            if (!chemin.empty()){
+                chemin.front() = depart;
+            }
             return chemin;
         }
 };
 
 void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, pair<int, int>& pos, int& nx, int& ny) {
-        if (d.casevalide(nx, ny)){
+    if (d.casevalide(nx, ny)){
         perso.updateLastPos(pos);
         d.deplacer(perso, nx, ny);
         d.resoudreCase(perso, d.getGrille(nx, ny));
@@ -562,7 +566,7 @@ void boucleDeJeu(Donjon& d, Aventurier& perso, BFS& bfs){
                 pair<int, int> exit = {largeur-2, hauteur-2};
                 if (perso.getPos() == exit){
                     condition = true;
-                    cout << "Niveau terminé !!!" << endl;
+                    cout << "Niveau termine !!!" << endl;
                 }
             }
             if (condition){

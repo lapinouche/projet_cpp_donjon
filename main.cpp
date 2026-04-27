@@ -1,3 +1,5 @@
+// ERREUR LIGNE 206 ; 236
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -6,7 +8,8 @@
 #include <utility> // for pair
 #include <typeinfo>
 
-unsigned int gamespeed = 100;
+#include <cstdlib> // for redraw the map an UI every frame
+#include <conio.h>
 
 //Not use yet
 /*
@@ -100,7 +103,7 @@ class Aventurier : public Case {
         int inventaire; // nombre de tresor ramasser par le joueur
 
     public:
-        Aventurier() : last_pos({0, 0}), position({0, 0}), sante(100), inventaire(0) {}
+        Aventurier() : last_pos({1, 1}), position({1, 1}), sante(100), inventaire(0) {}
         Aventurier(const pair<int, int>& last_pos, const pair<int, int>& position, const int sante, const int inventaire) : last_pos(last_pos), position(position), sante(sante), inventaire(inventaire) {}
         TypeCase getType() const override { return TypeCase::AVENTURIER; }
         char afficher () override { return '@'; }
@@ -124,7 +127,11 @@ class Aventurier : public Case {
         void updatePos(pair<int, int> newPos){ this->position = newPos; }
         void updateLastPos(pair<int, int> newPos){ this->last_pos = newPos; }
         pair<int, int> getPos() { return this->position; }
+        int getXP() { return this->position.first; }
+        int getYP() { return this->position.second; }
         pair<int, int> getLastPos() { return this->last_pos; }
+        int getXLP() { return this->last_pos.first; }
+        int getYLP() { return this->last_pos.second; }
 };
 
 class Entree : public Case {
@@ -184,14 +191,22 @@ class Donjon {
         Donjon() : largeur(0), hauteur(0) {}
         Donjon(const vector<vector<Case*>>& g, const int l=0, const int h=0) : largeur(l), hauteur(h), grille(g) {}
 
-        void afficher(){
+        void afficher(Aventurier& perso){
             for (int j=0; j < hauteur; j++){
                 for (int i=0; i < largeur; i++){
-                    cout << grille[i][j]->afficher();
+                    if (i == perso.getXP() && j == perso.getYP()) {
+                        cout << '@';
+                    } else {
+                        cout << grille[i][j]->afficher();
+                    }
                 }
                 cout << endl;
             }
         }
+
+        Case* getGrille(int i, int j) { return this->grille[i][j]; }
+        int getLargeur() { return this->largeur; }
+        int getHauteur() { return this->hauteur; }
 
         vector<string> melanger(vector<string> directions){ // à modifier
             for (int i = directions.size() - 1; i > 0; i--) {
@@ -356,14 +371,14 @@ class Donjon {
             return grille[x][y]->getType() != TypeCase::MUR;
         }
 
-        void deplacer(Aventurier perso, int nx, int ny){
+        void deplacer(Aventurier& perso, int nx, int ny){
             // precondition : la case (nx, ny) est franchissable (pas un mur)
             if (casevalide(nx, ny) == true){
                 perso.updatePos({nx, ny});
             }
         }
 
-        void resoudreCase(Aventurier perso, Case* c) {
+        void resoudreCase(Aventurier& perso, Case* c) {
                 if (c->getType() == TypeCase::MONSTRE){
                         string choix = "fuire";
                         cout << "Voulez vous combatre ou fuire ?" << endl;
@@ -371,11 +386,11 @@ class Donjon {
                         if (choix == "combatre"){
                                 int r = rand() % 100;
                                 if (r < 50) { // valeur choisi arbitrairement 
-                                        cout << "Combat perdu";
+                                        cout << "Combat perdu" << endl;
                                         perso.setSante(-40); // valeur choisi arbitrairement 
                                 }
                                 else {
-                                        cout << "Combat gagné";
+                                        cout << "Combat gagné" << endl;
                                         perso.setSante(20); // valeur choisi arbitrairement 
                                 }    
                         }
@@ -397,11 +412,6 @@ class Donjon {
                         perso.setInventaire(-1); // valeur choisi arbitrairement
                 }
         }
-
-        /*
-        void boucleDeJeu(Donjon& d){
-
-        }*/
 };
 
 class BFS : public Donjon {
@@ -472,29 +482,149 @@ class BFS : public Donjon {
         }
 };
 
-// https://www.pointerlab.fr/blog/cpp-std-queue
-// https://cplusplus.com/forum/general/94461/
 
-int main(){
-    srand(time(NULL));
-    Donjon d;
-    d.initialiserGrille(21, 11);
-    d.afficher();
-    
+void boucleDeJeu(Donjon& d, Aventurier& perso){
+    int largeur = 21;
+    int hauteur = 11;
+    bool running = true;
+    bool condition = false;
+    d.initialiserGrille(largeur, hauteur);
+    d.afficher(perso);
+            
     BFS bfs;
-    bfs.initialiserGrille(21, 11);
-    queue<pair<int, int>> chemin = bfs.trouverChemin({1, 1}, {19, 9}); // {0, 0}, {21, 11}  --  {grille[0].size(), grille.size()}
-    
+    bfs.initialiserGrille(largeur, hauteur);
+    queue<pair<int, int>> chemin = bfs.trouverChemin({1, 1}, {largeur-2, hauteur-2}); // {0, 0}, {21, 11}  --  {grille[0].size(), grille.size()}
+
     if(!chemin.empty()) {
         cout << "Path found! Length: " << chemin.size() << endl;
+        while (running){
+            srand(time(NULL));
+            if (_kbhit()) { // Check if a key was pressed
+                char key = _getch(); // Get the character without displaying it
+                pair<int, int> pos = perso.getPos();
+                pair<int, int> last_pos = perso.getLastPos();
+                int nx;
+                int ny;
+                switch (key) {
+                    case 'z': case 'Z':
+                        nx = pos.first;
+                        ny = pos.second -1;
+                        if (d.casevalide(nx, ny)){
+                            perso.updateLastPos(pos);
+                            d.deplacer(perso, nx, ny);
+                            d.resoudreCase(perso, d.getGrille(nx, ny));
+                            d.afficher(perso);
+                            perso.afficherStatut();
+                        } else {
+                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
+                        }
+                        break;
+                    case 's': case 'S':
+                        nx = pos.first;
+                        ny = pos.second + 1;
+                        if (d.casevalide(nx, ny)){
+                            perso.updateLastPos(pos);
+                            d.deplacer(perso, nx, ny);
+                            d.resoudreCase(perso, d.getGrille(nx, ny));
+                            d.afficher(perso);
+                            perso.afficherStatut();
+                        } else {
+                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
+                        }
+                        break;
+                    case 'q': case 'Q':
+                        nx = pos.first - 1;
+                        ny = pos.second;
+                        if (d.casevalide(nx, ny)){
+                            perso.updateLastPos(pos);
+                            d.deplacer(perso, nx, ny);
+                            d.resoudreCase(perso, d.getGrille(nx, ny));
+                            d.afficher(perso);
+                            perso.afficherStatut();
+                        } else {
+                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
+                        }
+                        break;
+                    case 'd': case 'D':
+                        nx = pos.first + 1;
+                        ny = pos.second;
+                        if (d.casevalide(nx, ny)){
+                            perso.updateLastPos(pos);
+                            d.deplacer(perso, nx, ny);
+                            d.resoudreCase(perso, d.getGrille(nx, ny));
+                            d.afficher(perso);
+                            perso.afficherStatut();
+                        } else {
+                            cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
+                        }
+                        break;
+                }
+                if (!perso.estVivant()){
+                    condition = true;
+                    cout << "Game over" << endl;
+                }
+                pair<int, int> exit = {largeur-2, hauteur-2};
+                if (perso.getPos() == exit){
+                    condition = true;
+                    cout << "Niveau terminé !!!" << endl;
+                }
+            }
+            if (condition){
+                running = false;
+            }
+        }
     } else {
-        cout << "No path found." << endl;
+        // creat the game until we have a path to exit
+        boucleDeJeu(d, perso);
     }
+}
 
-    bool running = true;
-    while (running){
-        running = false;
-    }
-
+int main(){
+    Donjon d;
+    Aventurier perso;
+    boucleDeJeu(d, perso);
     return 0;
 }
+
+
+/*
+// For drawing message only 5 second
+#include <chrono>
+
+auto lastErrorTime = std::chrono::steady_clock::now();
+bool showErrorMessage = false;
+
+// Inside your input loop:
+if (!casevalide(nextX, nextY)) {
+    showErrorMessage = true;
+    lastErrorTime = std::chrono::steady_clock::now();
+}
+
+// Inside your drawing logic:
+auto currentTime = std::chrono::steady_clock::now();
+std::chrono::duration<double> elapsed = currentTime - lastErrorTime;
+
+if (showErrorMessage && elapsed.count() < 5.0) {
+    cout << "Vous ne pouvez pas allez dans cette direction !" << endl;
+} else {
+    showErrorMessage = false; // Stop showing after 5 seconds
+}
+*/
+
+/*
+char input;
+std::cin >> input;
+
+if (input == 'z') {
+    // moveUp();
+} else if (input == 's') {
+    // moveDown();
+} else if (input == 'q') {
+    // moveLeft();
+} else if (input == 'd') {
+    // moveRight();
+}
+*/
+
+// https://www.pointerlab.fr/blog/cpp-std-queue
+// https://cplusplus.com/forum/general/94461/

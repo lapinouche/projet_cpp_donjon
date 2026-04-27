@@ -1,5 +1,3 @@
-// ERREUR LIGNE 206 ; 236
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -7,6 +5,8 @@
 #include <queue>
 #include <utility> // for pair
 #include <typeinfo>
+
+unsigned int gamespeed = 100;
 
 //Not use yet
 /*
@@ -26,8 +26,11 @@ enum class TypeCase {
     MONSTRE,
     PIEGE, 
     ENTREE,
-    SORTIE
+    SORTIE,
+    AVENTURIER
 };
+
+class Donjon;
 
 class Case{
     public:
@@ -40,10 +43,6 @@ class Case{
         
         void SetV(bool newstate){ this->visiter = newstate; }
         bool getV() const{ return visiter; }
-        /*
-        // to be done later
-        void boucleDeJeu(Donjon& d){
-        }*/
 };
 
 class Mur : public Case {
@@ -95,6 +94,40 @@ class Piege : public Case {
         int getDegats () const { return degats; }
 };
 
+class Aventurier : public Case {
+    private:
+        pair<int, int> last_pos; // à mettre à jour lors avant le deplacement du joueur dans la boucle de jeu
+        pair<int, int> position;
+        int sante; // point de vie du joueur (initialiser à 100/100)
+        int inventaire; // nombre de tresor ramasser par le joueur
+
+    public:
+        Aventurier() : last_pos({0, 0}), position({0, 0}), sante(100), inventaire(0) {}
+        Aventurier(const pair<int, int>& last_pos, const pair<int, int>& position, const int sante, const int inventaire) : last_pos(last_pos), position(position), sante(sante), inventaire(inventaire) {}
+        TypeCase getType() const override { return TypeCase::AVENTURIER; }
+        char afficher () override { return '@'; }
+
+        bool estVivant(){
+            if (sante > 0){
+                return true;
+            }
+            return false;
+        }
+
+        void afficherStatut(){
+            cout << "position courante : ";
+            cout << "(" << position.first << ", " << position.second << ")" << endl;
+            cout << "points de vie : " << sante << endl;
+            cout << "contenu de l'inventaire : " << inventaire << endl;
+        }
+
+        void setSante(int point_vie){ this->sante += point_vie; }
+        void setInventaire(int newelement){ this->inventaire += newelement; }
+        void updatePos(pair<int, int> newPos){ this->position = newPos; }
+        void updateLastPos(pair<int, int> newPos){ this->last_pos = newPos; }
+        pair<int, int> getPos() { return this->position; }
+        pair<int, int> getLastPos() { return this->last_pos; }
+};
 
 class Entree : public Case {
     public:
@@ -133,6 +166,9 @@ class CaseFactory {
                 case TypeCase::SORTIE:{
                     return new Sortie();
                 }
+                case TypeCase::AVENTURIER:{
+                    return new Aventurier();
+                }
                 default:{
                     return nullptr;
                 }
@@ -141,7 +177,7 @@ class CaseFactory {
 };
 
 class Donjon {
-    protected: // protected, like this Aventurier can see it
+    protected:
         vector<vector<Case*>> grille;
         int largeur;
         int hauteur;
@@ -241,22 +277,19 @@ class Donjon {
             grille[largeur-2][hauteur-2] = new Sortie();
         }
 
-        /*
-        Case* poserEntree(){ // const vector<vector<Case*>>& grille
-            Case* entree = grille[1][1]; //grille[0][0];
-            return entree;
+        
+        void poserAventurier(int x, int y) {
+            // Note: Use largeur-2/hauteur-2 if the edges are walls!
+            delete grille[x][y];
+            grille[x][y] = new Aventurier();
         }
-
-        Case* poserSortie(){ // const vector<vector<Case*>>& grille
-            Case* sortie = grille[(largeur-1)][(hauteur-1)];
-            return sortie;
-        } */
 
         void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
             generer(largeur, hauteur);
             genererLabyrinthe(1, 1);
             poserEntree();
             poserSortie();
+            poserAventurier(1, 1);
             placerElement();
         }
 
@@ -292,6 +325,7 @@ class Donjon {
                     }
                 }
             }
+            cout << "Aucun chemin trouvé !" << endl;
             return {};
         }
 
@@ -323,6 +357,53 @@ class Donjon {
             }
             return grille[x][y]->getType() != TypeCase::MUR;
         }
+
+        void deplacer(Aventurier perso, int nx, int ny){
+            // precondition : la case (nx, ny) est franchissable (pas un mur)
+            if (casevalide(nx, ny) == true){
+                perso.updatePos({nx, ny});
+            }
+        }
+
+        void resoudreCase(Aventurier perso, Case* c) {
+                if (c->getType() == TypeCase::MONSTRE){
+                        string choix = "fuire";
+                        cout << "Voulez vous combatre ou fuire ?" << endl;
+                        cin >> choix;
+                        if (choix == "combatre"){
+                                int r = rand() % 100;
+                                if (r < 50) { // valeur choisi arbitrairement 
+                                        cout << "Combat perdu";
+                                        perso.setSante(-40); // valeur choisi arbitrairement 
+                                }
+                                else {
+                                        cout << "Combat gagné";
+                                        perso.setSante(20); // valeur choisi arbitrairement 
+                                }    
+                        }
+                        else if (choix == "fuire") {
+                                perso.updatePos(perso.getLastPos());
+                        }
+                        else {
+                                cout << "saisie incorrect" << endl;
+                                resoudreCase(perso, c);
+                        }
+                }
+                else if (c->getType() == TypeCase::TRESOR){
+                        perso.setInventaire(1);
+                        pair<int, int> position = perso.getPos();
+                        delete grille[position.first][position.second];
+                        grille[position.first][position.second] =  CaseFactory::creerCase(TypeCase::PASSAGE);
+                }
+                else if (c->getType() == TypeCase::PIEGE){
+                        perso.setInventaire(-1); // valeur choisi arbitrairement
+                }
+        }
+
+        /*
+        void boucleDeJeu(Donjon& d){
+
+        }*/
 };
 
 class BFS : public Donjon {
@@ -394,76 +475,7 @@ class BFS : public Donjon {
 };
 
 // https://www.pointerlab.fr/blog/cpp-std-queue
-
-class Aventurier : public Case, Donjon {
-    private:
-        pair<int, int> last_pos; // à mettre à jour lors avant le deplacement du joueur dans la boucle de jeu
-        pair<int, int> position;
-        int sante; // point de vie du joueur (initialiser à 100/100)
-        int inventaire; // nombre de tresor ramasser par le joueur
-    
-    public:
-        Aventurier(vector<vector<Case*>>& grille, const pair<int, int>& last_pos = {0, 0}, const pair<int, int>& position = {0, 0}, const int sante = 100, const int inventaire = 0) : Donjon(grille), last_pos(last_pos), position(position), sante(sante), inventaire(inventaire) {}
-
-        char afficher () override {
-            return '@';
-        }
-
-        void deplacer(int nx, int ny){
-            // precondition : la case (nx, ny) est franchissable (pas un mur)
-            if (Donjon::casevalide(nx, ny) == true){
-                position = {nx, ny};
-            }
-        }
-
-        bool estVivant(){
-            if (sante > 0){
-                return true;
-            }
-            return false;
-        }
-
-        void resoudreCase(Case* c){
-            if (typeid(c) == typeid(Monstre)){
-                string choix = "fuire";
-                cout << "Voulez vous combatre ou fuire ?" << endl;
-                cin >> choix;
-                if (choix == "combatre"){
-                    int r = rand() % 100;
-                    if (r < 50){ // valeur choisi arbitrairement 
-                        cout << "Combat perdu";
-                        sante -= 40; // valeur choisi arbitrairement 
-                    }
-                    else{
-                        cout << "Combat gagné";
-                        sante += 20; // valeur choisi arbitrairement 
-                    }
-                    
-                }
-                else if (choix == "fuire"){
-                    position = last_pos;
-                }
-                else{
-                    cout << "saisie incorrect" << endl;
-                    resoudreCase(c);
-                }
-            }
-            else if (typeid(c) == typeid(Tresor)){
-                inventaire += 1;
-                grille[position.first][position.second] =  CaseFactory::creerCase(TypeCase::PASSAGE);
-            }
-            else if (typeid(c) == typeid(Piege)){
-                inventaire -= 1; // valeur choisi arbitrairement
-            }
-        }
-
-        void afficherStatut(){
-            cout << "position courante : ";
-            cout << "(" << position.first << ", " << position.second << ")" << endl;
-            cout << "points de vie : " << sante << endl;
-            cout << "contenu de l'inventaire : " << inventaire << endl;
-        }
-};
+// https://cplusplus.com/forum/general/94461/
 
 int main(){
     srand(time(NULL));
@@ -479,6 +491,11 @@ int main(){
         cout << "Path found! Length: " << chemin.size() << endl;
     } else {
         cout << "No path found." << endl;
+    }
+
+    bool running = true;
+    while (running){
+        running = false;
     }
 
     return 0;

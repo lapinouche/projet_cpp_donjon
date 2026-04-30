@@ -1,0 +1,42 @@
+Question : 
+perfect, that work out, a last thing, what does x1b, J and H mean ? How did you get that command :
+cout << "\x1b[2J\x1b[H"; 
+
+in : cin.ignore(1000, '\n'); 
+Why 1000 ?
+
+Gemini : 
+Those strings like \x1b[2J are called ANSI Escape Sequences. They are a universal standard for controlling terminal behavior (colors, cursor position, clearing the screen) dating back to the 1970s.
+Here is the breakdown of that "magic" command:
+1. The Anatomy of \x1b[2J\x1b[H
+    \x1b: This is the Escape character in hexadecimal. In the ASCII table, it is decimal 27. It tells the terminal: "Stop printing characters and start listening for a command."
+    [: This is the Control Sequence Introducer (CSI). Almost all terminal commands start with \x1b[.
+
+The J Command (Clear Screen)
+    2J: The J command is for "Erase in Display."
+        0J: Clear from cursor to end of screen.
+        1J: Clear from beginning to cursor.
+        2J: Clear the entire screen.
+
+The H Command (Cursor Position)
+    H: This is "Cursor Home."
+        By default, \x1b[H moves the cursor to the top-left corner (row 1, column 1).
+        Without this, after clearing the screen, your next cout would start printing at the bottom of the empty terminal!
+
+Summary: \x1b[2J\x1b[H literally means: "Wipe everything off the screen and put the cursor back at the very top."
+2. Why 1000 in cin.ignore?
+
+The function signature is cin.ignore(count, delimiter). It tells C++: "Discard characters from the input buffer until you have discarded count characters OR you hit the delimiter."
+C++
+
+cin.ignore(1000, '\n');
+
+    1000: This is just a "big enough" number. We don't know exactly how many characters the user typed. If they typed "combatre" followed by 50 spaces and then Enter, we need to clear all of it. 1000 is a safe bet for a single line of text.
+
+        Pro tip: Professional C++ programmers often use numeric_limits<streamsize>::max() instead of 1000 to mean "ignore everything until the end of the buffer," but 1000 is perfectly fine for a game.
+
+    '\n': This is the most important part. It tells the function to stop ignoring once it reaches the "Enter" key (newline). This "cleans" the buffer so that your next _getch() or cin starts with a fresh slate, rather than reading leftover garbage from the previous input.
+
+Why did the "Glitch" stop?
+
+Before you added ignore, the \n from your combat choice was still sitting in the computer's memory. Your while loop would restart, _kbhit() would see that \n, and your character would try to "move" using a newline character as the key, causing the map to redraw incorrectly or skip frames. Cleaning the buffer makes the movement feel "snappy" again!

@@ -12,6 +12,11 @@
 
 #include <ctime>
 #include <algorithm>
+#include <limits>
+
+// to allow the game to "sleep" some seconds
+//#include <chrono>
+//#include <thread>
 
 //Not use yet
 /*
@@ -143,6 +148,7 @@ class Aventurier : public Case {
         int getSante() { return this->sante; }
         void SanteNull() { this->sante = 0; }
         void setInventaire(int newelement){ this->inventaire += newelement; }
+        int getInventaire() { return this->inventaire; }
         void updatePos(pair<int, int> newPos){ this->position = newPos; }
         void updateLastPos(pair<int, int> newPos){ this->last_pos = newPos; }
         pair<int, int> getPos() { return this->position; }
@@ -208,13 +214,18 @@ class Donjon {
         vector<vector<Case*>> grille;
         int largeur;
         int hauteur;
+        int nb_tresors;
         bool condEntree;
 
     public:
-        Donjon() : largeur(0), hauteur(0), condEntree(true) {}
-        Donjon(const vector<vector<Case*>>& g, const int l=0, const int h=0, const bool cE=true) : largeur(l), hauteur(h), grille(g), condEntree(cE) {}
+        Donjon() : largeur(0), hauteur(0), nb_tresors(0), condEntree(true) {}
+        Donjon(const vector<vector<Case*>>& g, const int l=0, const int h=0, const int nt=0, const bool cE=true) : largeur(l), hauteur(h), grille(g), nb_tresors(nt), condEntree(cE) {}
+
+        int getNT() { return this->nb_tresors;}
+        void SetNT() { this->nb_tresors--;}
 
         void afficher(Aventurier& perso){
+            cout << "\x1b[H" << flush;
             for (int j=0; j < hauteur; j++){
                 for (int i=0; i < largeur; i++){
                     if (i == perso.getXP() && j == perso.getYP()) {
@@ -303,23 +314,24 @@ class Donjon {
 
         void poserEntree() {
             delete grille[1][1];
-            grille[1][1] = new Entree(); 
+            grille[1][1] = CaseFactory::creerCase(TypeCase::ENTREE); 
         }
 
         void poserSortie() {
             // Note: Use largeur-2/hauteur-2 if the edges are walls!
             delete grille[largeur-2][hauteur-2];
-            grille[largeur-2][hauteur-2] = new Sortie();
+            grille[largeur-2][hauteur-2] = CaseFactory::creerCase(TypeCase::SORTIE);
         }
 
         
         void poserAventurier(int x, int y) {
             // Note: Use largeur-2/hauteur-2 if the edges are walls!
             delete grille[x][y];
-            grille[x][y] = new Aventurier();
+            grille[x][y] = CaseFactory::creerCase(TypeCase::AVENTURIER);
         }
 
         void initialiserGrille(int largeur, int hauteur){ // void ou vector<vector<Case*>> !?
+            cout << "nombre de tresors minimum requis pour finir le jeu : " << int(0.8*nb_tresors) << endl;
             generer(largeur, hauteur);
             genererLabyrinthe(1, 1);
             poserSortie();
@@ -370,6 +382,7 @@ class Donjon {
                         int r = rand() % 100;
                         if (r < 5) {
                             delete grille[i][j];
+                            this->nb_tresors+=1;
                             grille[i][j] = CaseFactory::creerCase(TypeCase::TRESOR);
                         } 
                         else if (r < 10) {
@@ -416,14 +429,16 @@ class Donjon {
                 cout << "Voulez vous combatre ou fuire ? (c ou f)" << endl;
                 cin >> choix;
 
-                cin.ignore(1000, '\n'); // Clear the buffer so the 'Enter' key doesn't ghost into the next move
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear the buffer so the 'Enter' key doesn't ghost into the next move
+                cout << "\x1b[2J\x1b[H";
+                afficher(perso);
 
                 if (choix == "c"){
                     int r = rand() % 100;
                     if (r < 50) { // valeur choisi arbitrairement 
                         cout << "Combat perdu" << endl;
                         if (perso.getSante() > 40){
-                            perso.setSante(-40); // valeur choisi arbitrairement 
+                            perso.setSante(-60); // valeur choisi arbitrairement 
                         } else{
                             perso.SanteNull();
                         }
@@ -442,10 +457,10 @@ class Donjon {
                     cout << "saisie incorrect" << endl;
                     resoudreCase(perso, p, c);
                 }
-                cout << "\x1b[2J\x1b[H";
             }
             else if (c->getType() == TypeCase::TRESOR){
                 perso.setInventaire(1);
+                SetNT();
                 pair<int, int> position = perso.getPos();
                 delete grille[position.first][position.second];
                 grille[position.first][position.second] =  CaseFactory::creerCase(TypeCase::PASSAGE);
@@ -541,8 +556,13 @@ class BFS {
         }
 };
 
-void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, Pelle& p, pair<int, int>& pos, int& nx, int& ny) {
-    if (d.casevalide(nx, ny)){
+void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, Pelle& p, pair<int, int>& pos, int& nx, int& ny, int& nbtad) {
+    cout << "\x1b[2J\x1b[H" << flush;
+    if (nx == (d.getLargeur() - 2) && ny == (d.getHauteur() - 2) && (int(0.8*nbtad) -  perso.getInventaire()) > 0) {
+        cout << "Il vous faut encore trouver au moins "; 
+        cout << int(0.8*nbtad) - perso.getInventaire(); // update nb tresors : d.getNT()
+        cout << " pour finir la partie !" << endl;
+    } else if (d.casevalide(nx, ny)){
         stringstream frame;
         perso.updateLastPos(pos);
         d.deplacer(perso, nx, ny);
@@ -550,15 +570,17 @@ void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, Pelle& p, pair<int, 
         d.afficher(perso);
         perso.afficherStatut(p);
         bfs.AffichDist(d, nx, ny);
-    } else if (p.GetNbp() > 0 && nx > 0 && nx <= d.getLargeur() && ny > 0 && ny <= d.getHauteur()) {
+    } else if (p.GetNbp() > 0 && nx > 1 && nx <= d.getLargeur()-2 && ny > 1 && ny <= d.getHauteur()-2) {
         cout << "\x1b[2J\x1b[H"; // full clear so the menu is clean
         string choix = "v";
         cout << "Voulez vous creer un passage ? (v ou f)" << endl;
         cin >> choix;
-        cin.ignore(1000, '\n');
-        cout << "\x1b[2J\x1b[H";
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "\x1b[2J\x1b[H"; // Just added
+        d.afficher(perso);
         if (choix == "v"){
             stringstream frame;
+            cout << "\x1b[2J\x1b[H" << flush;
             d.CreerChemin(nx, ny);
             p.UseNbp();
             perso.updateLastPos(pos);
@@ -568,7 +590,6 @@ void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, Pelle& p, pair<int, 
             perso.afficherStatut(p);
             bfs.AffichDist(d, nx, ny);
         }
-        
     } else {
         cout << "Vous ne pouvez pas allez dans cette direction, veuillez en choisir une autre !" << endl;
     }
@@ -577,12 +598,13 @@ void execute_touche(Donjon& d, BFS& bfs, Aventurier& perso, Pelle& p, pair<int, 
 void boucleDeJeu(Donjon& d, Aventurier& perso, BFS& bfs, Pelle& p){
     int largeur = 21;
     int hauteur = 11;
+    int nbtad = d.getNT(); // nombre de tresors disponible au debut du jeu
     
     // 1. Initialize ONCE
     d.initialiserGrille(largeur, hauteur);
 
     // 2. Clear screen once at start
-    cout << "\x1b[2J\x1b[H";
+    cout << "\x1b[2J\x1b[H"; // flush just added
     d.afficher(perso);
     perso.afficherStatut(p);
 
@@ -611,15 +633,35 @@ void boucleDeJeu(Donjon& d, Aventurier& perso, BFS& bfs, Pelle& p){
                     break;
             }
 
-            if (nx != pos.first || ny != pos.second){
-                cout << "\x1b[H";
-                execute_touche(d, bfs, perso, p, pos, nx, ny);
-            }
-            
-            if (!perso.estVivant() || perso.getPos() == make_pair(largeur-2, hauteur-2)){
+            if (!perso.estVivant() || perso.getInventaire() + d.getNT() < int(0.8*nbtad)){ // Si  le personnage n'a plus de vie ou le nombre de tresors posséder par le personnage plus le nombre de tresors restant sur le plateau est inférieur au nombre de tresors requis pour terminer le jeu
+                // 1. Clear the entire screen (\x1b[2J) 
+                // 2. Move cursor to top-leff (\x1b[H)
+                cout << "\x1b[2J\x1b[H"; // Remetre le cursor en haut
+                if (perso.estVivant()){
+                    cout << "========================" << endl;
+                    cout << "    Niveau perdu :(     " << endl;
+                    cout << "========================" << endl;
+                } else{
+                    cout << "===========================================================" << endl;
+                    cout << " Vous avez perdu trop de tresors pour pouvoir finir le jeu " << endl;
+                    cout << "                       Niveau perdu :(                     " << endl;
+                    cout << "===========================================================" << endl;
+                }
+                cout << "Appuyer sur une touche pour quitter..." << endl;
+                cin.ignore(); // Nettoyer toute precedente ligne dans le terminal (buffer)
+                cin.get();    // Attendre pour quitter le jeu
                 running = false;
-                if (!perso.estVivant()) cout << "Niveau Perdu :(" << endl;
-                else cout << "Niveau termine !!! :)" << endl;
+            } else if (perso.getPos() == make_pair(largeur-2, hauteur-2)){
+                cout << "\x1b[2J\x1b[H";
+                cout << "===========================" << endl;
+                cout << "   Niveau termine !!! :)   " << endl;
+                cout << "===========================" << endl;
+                cout << "Appuyer sur une touche pour quitter..." << endl;
+                cin.ignore(); // Nettoyer toute precedente ligne dans le terminal (buffer)
+                cin.get(); // Attendre pour quitter le jeu
+                running = false;
+            } else if (nx != pos.first || ny != pos.second){
+                execute_touche(d, bfs, perso, p, pos, nx, ny, nbtad);
             }
         }
     }
@@ -631,6 +673,9 @@ int main(){
     BFS bfs;
     Aventurier perso;
     Pelle p;
+    cout << "\x1b[?1049h\x1b[?25l" << flush;
     boucleDeJeu(d, perso, bfs, p);
+    cout << "\x1b[?25h\x1b[?1049l" << flush;
+    //cout << "\x1b[?1049l\x1b[?25h" << flush;
     return 0;
 }
